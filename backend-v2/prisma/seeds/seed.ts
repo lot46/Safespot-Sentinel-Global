@@ -5,6 +5,7 @@
 
 import { PrismaClient, Role, Theme, Plan, PaymentProvider, PaymentStatus } from '@prisma/client';
 import bcrypt from 'bcrypt';
+import { encrypt } from '../../src/security/encryption.js';
 
 const prisma = new PrismaClient();
 
