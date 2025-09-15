@@ -1,9 +1,9 @@
 /**
  * SafeSpot Sentinel Global V2 - Encryption & Hashing Utilities
- * AES-256 encryption for sensitive data with GDPR compliance
+ * AES-256-GCM encryption for sensitive data with GDPR compliance
  */
 
-import { createCipher, createDecipher, createHash, randomBytes, scrypt } from 'crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes, scrypt } from 'crypto';
 import { promisify } from 'util';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
@@ -24,27 +24,18 @@ async function deriveKey(salt: Buffer): Promise<Buffer> {
 export async function encrypt(plaintext: string): Promise<string> {
   try {
     const salt = randomBytes(16);
-    const iv = randomBytes(16);
+    const iv = randomBytes(12); // 96-bit IV for GCM
     const key = await deriveKey(salt);
-    
-    const cipher = createCipher(algorithm, key);
+
+    const cipher = createCipheriv(algorithm, key, iv);
     cipher.setAAD(Buffer.from('SafeSpot-Sentinel-Global', 'utf8'));
-    
-    let encrypted = cipher.update(plaintext, 'utf8', 'hex');
-    encrypted += cipher.final('hex');
-    
+
+    const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
     const authTag = cipher.getAuthTag();
-    
-    // Combine salt, iv, authTag, and encrypted data
-    const combined = Buffer.concat([
-      salt,
-      iv,
-      authTag,
-      Buffer.from(encrypted, 'hex')
-    ]);
-    
+
+    // Combine salt(16) + iv(12) + authTag(16) + ciphertext
+    const combined = Buffer.concat([salt, iv, authTag, encrypted]);
     return combined.toString('base64');
-    
   } catch (error) {
     logger.error('Encryption error:', error);
     throw new Error('Encryption failed');
@@ -57,27 +48,23 @@ export async function encrypt(plaintext: string): Promise<string> {
 export async function decrypt(encryptedData: string): Promise<string> {
   try {
     const combined = Buffer.from(encryptedData, 'base64');
-    
-    if (combined.length < 48) { // 16 + 16 + 16 minimum
+    if (combined.length < 44) { // 16 + 12 + 16 minimum
       throw new Error('Invalid encrypted data format');
     }
-    
+
     const salt = combined.subarray(0, 16);
-    const iv = combined.subarray(16, 32);
-    const authTag = combined.subarray(32, 48);
-    const encrypted = combined.subarray(48);
-    
+    const iv = combined.subarray(16, 28);
+    const authTag = combined.subarray(28, 44);
+    const ciphertext = combined.subarray(44);
+
     const key = await deriveKey(salt);
-    
-    const decipher = createDecipher(algorithm, key);
+
+    const decipher = createDecipheriv(algorithm, key, iv);
     decipher.setAuthTag(authTag);
     decipher.setAAD(Buffer.from('SafeSpot-Sentinel-Global', 'utf8'));
-    
-    let decrypted = decipher.update(encrypted, undefined, 'utf8');
-    decrypted += decipher.final('utf8');
-    
-    return decrypted;
-    
+
+    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+    return decrypted.toString('utf8');
   } catch (error) {
     logger.error('Decryption error:', error);
     throw new Error('Decryption failed');
@@ -93,6 +80,20 @@ export function hashSensitiveData(data: string, salt?: string): string {
     .update(data + saltToUse)
     .digest('hex')
     .substring(0, 16); // First 16 chars for logs
+}
+
+/**
+ * Hash value for search/equality (full SHA-256)
+ */
+export function hashForSearch(value: string): string {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+/**
+ * Normalize phone number for hashing (digits only)
+ */
+export function normalizePhone(input: string): string {
+  return (input || '').replace(/\D/g, '');
 }
 
 /**
@@ -124,7 +125,7 @@ export function generateSecureToken(length: number = 32): string {
 }
 
 /**
- * Generate UUID v4
+ * Generate UUID v4 (pseudo)
  */
 export function generateUUID(): string {
   return randomBytes(16).toString('hex').replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, '$1-$2-$3-$4-$5');
@@ -137,12 +138,10 @@ export function constantTimeCompare(a: string, b: string): boolean {
   if (a.length !== b.length) {
     return false;
   }
-  
   let result = 0;
   for (let i = 0; i < a.length; i++) {
     result |= a.charCodeAt(i) ^ b.charCodeAt(i);
   }
-  
   return result === 0;
 }
 
@@ -153,15 +152,11 @@ export function anonymizeData(data: any): any {
   if (typeof data !== 'object' || data === null) {
     return data;
   }
-  
   const anonymized = { ...data };
-  
-  // List of fields to anonymize
   const sensitiveFields = [
     'email', 'phone', 'firstName', 'lastName', 'address',
     'ipAddress', 'userAgent', 'deviceId', 'location'
   ];
-  
   for (const field of sensitiveFields) {
     if (anonymized[field]) {
       if (field === 'email') {
@@ -175,7 +170,6 @@ export function anonymizeData(data: any): any {
       }
     }
   }
-  
   return anonymized;
 }
 
@@ -184,18 +178,15 @@ export function anonymizeData(data: any): any {
  */
 export function generate2FABackupCodes(count: number = 10): string[] {
   const codes: string[] = [];
-  
   for (let i = 0; i < count; i++) {
-    // Generate 8-character alphanumeric code
     const code = randomBytes(4).toString('hex').toUpperCase();
     codes.push(`${code.substring(0, 4)}-${code.substring(4, 8)}`);
   }
-  
   return codes;
 }
 
 /**
- * Validate data integrity with HMAC
+ * Validate data integrity with HMAC-like signature
  */
 export function createDataSignature(data: string, secret?: string): string {
   const secretToUse = secret || config.security.encryption.key;
@@ -205,7 +196,7 @@ export function createDataSignature(data: string, secret?: string): string {
 }
 
 /**
- * Verify data integrity with HMAC
+ * Verify data integrity signature
  */
 export function verifyDataSignature(data: string, signature: string, secret?: string): boolean {
   const expectedSignature = createDataSignature(data, secret);
@@ -219,6 +210,5 @@ export function generateSecureId(prefix?: string, length: number = 16): string {
   const randomPart = randomBytes(length).toString('base64')
     .replace(/[+/]/g, '')
     .substring(0, length);
-  
   return prefix ? `${prefix}_${randomPart}` : randomPart;
 }

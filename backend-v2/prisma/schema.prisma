@@ -1,4 +1,4 @@
-// SafeSpot Sentinel Global V2 - Prisma Schema
+// SafeSpot Sentinel Global V2 - Prisma Schema (updated for encryption-at-rest)
 // PostgreSQL 15 + PostGIS (geometry stored as Unsupported type)
 
 generator client {
@@ -76,38 +76,40 @@ enum Plan {
 
 // Models
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  passwordHash  String?
-  firstName     String
-  lastName      String
-  phone         String?  @unique
-  role          Role     @default(USER)
-  isActive      Boolean  @default(true)
-  isBanned      Boolean  @default(false)
-  isPremium     Boolean  @default(false)
-  premiumUntil  DateTime?
-  emailVerified Boolean  @default(false)
-  phoneVerified Boolean  @default(false)
-  twoFAEnabled  Boolean  @default(false)
-  twoFASecret   String?
-  locale        String?  @default("fr-FR")
-  timezone      String?  @default("Europe/Paris")
-  lastLoginAt   DateTime?
-  lastLoginIP   String?
-  loginCount    Int      @default(0)
-  gdprConsent   Json?
+  id               String    @id @default(uuid())
+  email            String    @unique
+  passwordHash     String?
+  firstName        String
+  lastName         String
+  phone            String?   // encrypted at rest
+  phoneSearchHash  String?   @unique // sha256(normalized)
+  role             Role      @default(USER)
+  isActive         Boolean   @default(true)
+  isBanned         Boolean   @default(false)
+  isPremium        Boolean   @default(false)
+  premiumUntil     DateTime?
+  emailVerified    Boolean   @default(false)
+  phoneVerified    Boolean   @default(false)
+  twoFAEnabled     Boolean   @default(false)
+  twoFASecret      String?   // encrypted at rest
+  twoFABackupCodes String[]  @default([]) // hashed values
+  locale           String?   @default("fr-FR")
+  timezone         String?   @default("Europe/Paris")
+  lastLoginAt      DateTime?
+  lastLoginIP      String?
+  loginCount       Int       @default(0)
+  gdprConsent      Json?
 
   // Relations
-  preferences   UserPreferences?
-  contacts      UserContact[]
-  reports       Report[]
-  sosSessions   SOSSession[]
-  payments      Payment[]
+  preferences      UserPreferences?
+  contacts         UserContact[]
+  reports          Report[]
+  sosSessions      SOSSession[]
+  payments         Payment[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  deletedAt     DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
 }
 
 model UserPreferences {
@@ -133,7 +135,8 @@ model UserContact {
   userId       String
   user         User        @relation(fields: [userId], references: [id])
   type         ContactType
-  value        String
+  value        String      // encrypted at rest
+  valueHash    String?     // sha256(normalized), for dedup/search
   label        String
   relationship String?
   priority     Int         @default(1)
@@ -143,7 +146,7 @@ model UserContact {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
-  @@index([userId, type])
+  @@index([userId, type, valueHash])
 }
 
 model Report {

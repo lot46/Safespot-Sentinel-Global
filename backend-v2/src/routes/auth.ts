@@ -1,13 +1,13 @@
 /**
  * SafeSpot Sentinel Global V2 - Authentication Routes
- * JWT-based auth with 2FA, OAuth2, and security features
+ * JWT-based auth with 2FA, OAuth2/OIDC, CSRF, and security features
  */
 
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { getPrisma } from '../database/index.js';
 import { logger, logAuditEvent, logSecurityEvent } from '../utils/logger.js';
-import { hashPassword, verifyPassword } from '../security/encryption.js';
+import { hashPassword, verifyPassword, generateSecureToken, encrypt, decrypt, normalizePhone, hashForSearch } from '../security/encryption.js';
 import { createTokenPair, refreshAccessToken, revokeUserSession } from '../auth/jwt.js';
 import { 
   generate2FASetup, 
@@ -17,8 +17,7 @@ import {
   get2FAStatus,
   regenerateBackupCodes 
 } from '../auth/2fa.js';
-import { sendWelcomeEmail, sendEmailVerification } from '../integrations/email.js';
-import { generateSecureToken } from '../security/encryption.js';
+import { sendWelcomeEmail } from '../integrations/email.js';
 
 const prisma = getPrisma();
 
@@ -43,7 +42,7 @@ const loginSchema = z.object({
 });
 
 const refreshSchema = z.object({
-  refreshToken: z.string(),
+  refreshToken: z.string().optional(),
 });
 
 const setup2FASchema = z.object({
@@ -55,7 +54,42 @@ const verify2FASchema = z.object({
 });
 
 export default async function authRoutes(app: FastifyInstance) {
-  
+  // Helper: set refresh token cookie (HttpOnly)
+  function setRefreshCookie(reply: any, token: string) {
+    reply.setCookie('ssg_refresh', token, {
+      httpOnly: true,
+      secure: app.config.app.isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+    });
+  }
+
+  // Helper: set CSRF cookie
+  function setCSRFCookie(reply: any, token: string) {
+    reply.setCookie('ssg_csrf', token, {
+      httpOnly: false,
+      secure: app.config.app.isProduction,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 60 * 60, // 1 hour
+    });
+  }
+
+  /**
+   * CSRF token endpoint (double-submit cookie)
+   */
+  app.get('/csrf', {
+    schema: {
+      tags: ['Auth'],
+      summary: 'Get CSRF token',
+    },
+  }, async (request, reply) => {
+    const csrfToken = generateSecureToken(16);
+    setCSRFCookie(reply, csrfToken);
+    reply.send({ csrfToken });
+  });
+
   /**
    * Register new user
    */
@@ -63,65 +97,31 @@ export default async function authRoutes(app: FastifyInstance) {
     schema: {
       tags: ['Auth'],
       summary: 'Register new user account',
-      body: {
-        type: 'object',
-        required: ['email', 'password', 'firstName', 'lastName', 'gdprConsent'],
-        properties: {
-          email: { type: 'string', format: 'email' },
-          password: { type: 'string', minLength: 8, maxLength: 128 },
-          firstName: { type: 'string', minLength: 1, maxLength: 100 },
-          lastName: { type: 'string', minLength: 1, maxLength: 100 },
-          phone: { type: 'string' },
-          gdprConsent: { type: 'boolean' },
-          marketingConsent: { type: 'boolean' },
-        },
-      },
-      response: {
-        201: {
-          type: 'object',
-          properties: {
-            user: {
-              type: 'object',
-              properties: {
-                id: { type: 'string' },
-                email: { type: 'string' },
-                firstName: { type: 'string' },
-                lastName: { type: 'string' },
-                role: { type: 'string' },
-                emailVerified: { type: 'boolean' },
-              },
-            },
-            tokens: {
-              type: 'object',
-              properties: {
-                accessToken: { type: 'string' },
-                refreshToken: { type: 'string' },
-                expiresIn: { type: 'number' },
-                tokenType: { type: 'string' },
-              },
-            },
-          },
-        },
-      },
+    },
+    preHandler: async (req, reply) => {
+      // Per-route rate limit: 10 requests/hour per IP
+      const { ipRateLimitMiddleware } = await import('../middleware/auth.js');
+      await ipRateLimitMiddleware(req, reply, 10, 3600000);
     },
   }, async (request, reply) => {
     const data = registerSchema.parse(request.body);
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [
-          { email: data.email },
-          ...(data.phone ? [{ phone: data.phone }] : []),
-        ],
-      },
-    });
+    // Check if user already exists by email
+    const existingByEmail = await prisma.user.findUnique({ where: { email: data.email } });
+    if (existingByEmail) {
+      throw app.httpErrors.conflict('Email already registered');
+    }
 
-    if (existingUser) {
-      if (existingUser.email === data.email) {
-        throw app.httpErrors.conflict('Email already registered');
-      }
-      if (existingUser.phone === data.phone) {
+    // Phone handling (encrypt + hash)
+    let phoneEncrypted: string | undefined;
+    let phoneSearchHash: string | undefined;
+    if (data.phone) {
+      const normalized = normalizePhone(data.phone);
+      phoneEncrypted = await encrypt(data.phone);
+      phoneSearchHash = hashForSearch(normalized);
+
+      const existingByPhone = await prisma.user.findFirst({ where: { phoneSearchHash } });
+      if (existingByPhone) {
         throw app.httpErrors.conflict('Phone number already registered');
       }
     }
@@ -136,7 +136,8 @@ export default async function authRoutes(app: FastifyInstance) {
         passwordHash,
         firstName: data.firstName,
         lastName: data.lastName,
-        phone: data.phone,
+        phone: phoneEncrypted,
+        phoneSearchHash,
         role: 'USER',
         gdprConsent: {
           functional: true,
@@ -144,7 +145,7 @@ export default async function authRoutes(app: FastifyInstance) {
           marketing: data.marketingConsent,
           timestamp: new Date().toISOString(),
         },
-        marketingConsent: data.marketingConsent,
+        marketingConsent: data.marketingConsent as any,
         preferences: {
           create: {
             alertRadiusM: 2000,
@@ -161,9 +162,7 @@ export default async function authRoutes(app: FastifyInstance) {
           },
         },
       },
-      include: {
-        preferences: true,
-      },
+      include: { preferences: true },
     });
 
     // Generate session ID
@@ -177,13 +176,14 @@ export default async function authRoutes(app: FastifyInstance) {
       sessionId,
     });
 
+    // Set refresh token cookie
+    setRefreshCookie(reply, tokens.refreshToken);
+
     // Send welcome email (async)
     sendWelcomeEmail(user.email, `${user.firstName} ${user.lastName}`)
-      .catch(error => {
-        logger.warn('Failed to send welcome email:', error);
-      });
+      .catch(error => logger.warn('Failed to send welcome email:', error));
 
-    // Log audit event
+    // Audit log
     logAuditEvent({
       actorId: user.id,
       action: 'user_registered',
@@ -191,16 +191,7 @@ export default async function authRoutes(app: FastifyInstance) {
       resourceId: user.id,
       success: true,
       ipAddress: request.ip,
-      metadata: {
-        email: user.email,
-        registrationMethod: 'email',
-      },
-    });
-
-    logger.info('User registered successfully', { 
-      userId: user.id, 
-      email: user.email,
-      ip: request.ip 
+      metadata: { email: user.email, registrationMethod: 'email' },
     });
 
     reply.code(201).send({
@@ -212,7 +203,7 @@ export default async function authRoutes(app: FastifyInstance) {
         role: user.role,
         emailVerified: user.emailVerified,
       },
-      tokens,
+      tokens: { ...tokens, refreshToken: undefined },
     });
   });
 
@@ -220,99 +211,42 @@ export default async function authRoutes(app: FastifyInstance) {
    * Login user
    */
   app.post('/login', {
-    schema: {
-      tags: ['Auth'],
-      summary: 'Login user',
-      body: {
-        type: 'object',
-        required: ['email', 'password'],
-        properties: {
-          email: { type: 'string', format: 'email' },
-          password: { type: 'string' },
-          twoFACode: { type: 'string' },
-          rememberMe: { type: 'boolean' },
-        },
-      },
+    schema: { tags: ['Auth'], summary: 'Login user' },
+    preHandler: async (req, reply) => {
+      const { ipRateLimitMiddleware } = await import('../middleware/auth.js');
+      await ipRateLimitMiddleware(req, reply, 10, 3600000);
     },
   }, async (request, reply) => {
     const data = loginSchema.parse(request.body);
 
     // Find user
-    const user = await prisma.user.findUnique({
-      where: { email: data.email },
-    });
-
+    const user = await prisma.user.findUnique({ where: { email: data.email } });
     if (!user || !user.passwordHash) {
-      // Log failed login attempt
-      logSecurityEvent({
-        type: 'failed_login',
-        severity: 'low',
-        source: request.ip,
-        metadata: {
-          email: data.email,
-          reason: 'user_not_found',
-        },
-      });
-
-      // Generic error to prevent user enumeration
+      logSecurityEvent({ type: 'failed_login', severity: 'low', source: request.ip, metadata: { email: data.email, reason: 'user_not_found' } });
       throw app.httpErrors.unauthorized('Invalid credentials');
     }
 
     // Verify password
     const isPasswordValid = await verifyPassword(data.password, user.passwordHash);
     if (!isPasswordValid) {
-      logSecurityEvent({
-        type: 'failed_login',
-        severity: 'low',
-        source: request.ip,
-        userId: user.id,
-        metadata: {
-          email: data.email,
-          reason: 'invalid_password',
-        },
-      });
-
+      logSecurityEvent({ type: 'failed_login', severity: 'low', source: request.ip, userId: user.id, metadata: { email: data.email, reason: 'invalid_password' } });
       throw app.httpErrors.unauthorized('Invalid credentials');
     }
 
-    // Check if account is active
+    // Check account status
     if (!user.isActive || user.isBanned || user.deletedAt) {
-      logSecurityEvent({
-        type: 'failed_login',
-        severity: 'medium',
-        source: request.ip,
-        userId: user.id,
-        metadata: {
-          email: data.email,
-          reason: user.isBanned ? 'banned' : 'inactive',
-        },
-      });
-
+      logSecurityEvent({ type: 'failed_login', severity: 'medium', source: request.ip, userId: user.id, metadata: { email: data.email, reason: user.isBanned ? 'banned' : 'inactive' } });
       throw app.httpErrors.forbidden('Account is inactive or banned');
     }
 
-    // Check 2FA if enabled
+    // 2FA check
     if (user.twoFAEnabled) {
       if (!data.twoFACode) {
-        return reply.code(202).send({
-          requiresTwoFA: true,
-          message: '2FA code required',
-        });
+        return reply.code(202).send({ requiresTwoFA: true, message: '2FA code required' });
       }
-
       const twoFAResult = await verify2FA(user.id, data.twoFACode);
       if (!twoFAResult.isValid) {
-        logSecurityEvent({
-          type: 'failed_login',
-          severity: 'medium',
-          source: request.ip,
-          userId: user.id,
-          metadata: {
-            email: data.email,
-            reason: '2fa_failed',
-          },
-        });
-
+        logSecurityEvent({ type: 'failed_login', severity: 'medium', source: request.ip, userId: user.id, metadata: { email: data.email, reason: '2fa_failed' } });
         throw app.httpErrors.unauthorized('Invalid 2FA code');
       }
     }
@@ -331,32 +265,14 @@ export default async function authRoutes(app: FastifyInstance) {
     // Update user login info
     await prisma.user.update({
       where: { id: user.id },
-      data: {
-        lastLoginAt: new Date(),
-        lastLoginIP: request.ip,
-        loginCount: { increment: 1 },
-      },
+      data: { lastLoginAt: new Date(), lastLoginIP: request.ip, loginCount: { increment: 1 } },
     });
+
+    // Set refresh cookie
+    setRefreshCookie(reply, tokens.refreshToken);
 
     // Log successful login
-    logAuditEvent({
-      actorId: user.id,
-      action: 'user_login',
-      resource: 'user',
-      resourceId: user.id,
-      success: true,
-      ipAddress: request.ip,
-      metadata: {
-        email: user.email,
-        twoFAUsed: user.twoFAEnabled,
-      },
-    });
-
-    logger.info('User logged in successfully', { 
-      userId: user.id, 
-      email: user.email,
-      ip: request.ip 
-    });
+    logAuditEvent({ actorId: user.id, action: 'user_login', resource: 'user', resourceId: user.id, success: true, ipAddress: request.ip, metadata: { email: user.email, twoFAUsed: user.twoFAEnabled } });
 
     reply.send({
       user: {
@@ -368,25 +284,28 @@ export default async function authRoutes(app: FastifyInstance) {
         isPremium: user.isPremium,
         emailVerified: user.emailVerified,
       },
-      tokens,
+      tokens: { ...tokens, refreshToken: undefined },
     });
   });
 
   /**
-   * Refresh access token
+   * Refresh access token (supports cookie-based refresh token)
    */
   app.post('/refresh', {
-    schema: {
-      tags: ['Auth'],
-      summary: 'Refresh access token',
-    },
+    schema: { tags: ['Auth'], summary: 'Refresh access token' },
   }, async (request, reply) => {
-    const data = refreshSchema.parse(request.body);
+    const body = refreshSchema.parse(request.body || {});
+    const cookieRefresh = (request.cookies && (request.cookies['ssg_refresh'] as string)) || undefined;
+    const refreshToken = body.refreshToken || cookieRefresh;
+
+    if (!refreshToken) {
+      throw app.httpErrors.unauthorized('Refresh token required');
+    }
 
     try {
-      const tokens = await refreshAccessToken(data.refreshToken);
-      
-      reply.send({ tokens });
+      const tokens = await refreshAccessToken(refreshToken);
+      setRefreshCookie(reply, tokens.refreshToken);
+      reply.send({ tokens: { ...tokens, refreshToken: undefined } });
     } catch (error) {
       throw app.httpErrors.unauthorized('Invalid refresh token');
     }
@@ -397,204 +316,75 @@ export default async function authRoutes(app: FastifyInstance) {
    */
   app.post('/logout', {
     preHandler: [app.authenticate],
-    schema: {
-      tags: ['Auth'],
-      summary: 'Logout user',
-      security: [{ bearerAuth: [] }],
-    },
+    schema: { tags: ['Auth'], summary: 'Logout user', security: [{ bearerAuth: [] }] },
   }, async (request, reply) => {
     const user = request.user!;
-
-    // Revoke user session
     await revokeUserSession(user.id, user.sessionId);
 
-    // Log logout
-    logAuditEvent({
-      actorId: user.id,
-      action: 'user_logout',
-      resource: 'user',
-      resourceId: user.id,
-      success: true,
-      ipAddress: request.ip,
-    });
+    // Clear refresh cookie
+    reply.clearCookie('ssg_refresh', { path: '/' });
 
+    logAuditEvent({ actorId: user.id, action: 'user_logout', resource: 'user', resourceId: user.id, success: true, ipAddress: request.ip });
     reply.send({ message: 'Logged out successfully' });
   });
 
   /**
    * Setup 2FA
    */
-  app.post('/2fa/setup', {
-    preHandler: [app.authenticate],
-    schema: {
-      tags: ['Auth'],
-      summary: 'Setup 2FA for user',
-      security: [{ bearerAuth: [] }],
-    },
-  }, async (request, reply) => {
+  app.post('/2fa/setup', { preHandler: [app.authenticate], schema: { tags: ['Auth'], summary: 'Setup 2FA', security: [{ bearerAuth: [] }] } }, async (request, reply) => {
     const user = request.user!;
-
-    // Check if 2FA is already enabled
-    const currentUser = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: { twoFAEnabled: true },
-    });
-
-    if (currentUser?.twoFAEnabled) {
-      throw app.httpErrors.conflict('2FA is already enabled');
-    }
-
+    const currentUser = await prisma.user.findUnique({ where: { id: user.id }, select: { twoFAEnabled: true } });
+    if (currentUser?.twoFAEnabled) throw app.httpErrors.conflict('2FA is already enabled');
     const setup = await generate2FASetup(user.id, user.email);
-
-    reply.send({
-      secret: setup.secret,
-      qrCodeUrl: setup.qrCodeUrl,
-      backupCodes: setup.backupCodes,
-      manualEntryKey: setup.manualEntryKey,
-    });
+    reply.send({ secret: setup.secret, qrCodeUrl: setup.qrCodeUrl, backupCodes: setup.backupCodes, manualEntryKey: setup.manualEntryKey });
   });
 
-  /**
-   * Verify and complete 2FA setup
-   */
-  app.post('/2fa/verify-setup', {
-    preHandler: [app.authenticate],
-    schema: {
-      tags: ['Auth'],
-      summary: 'Verify 2FA setup',
-      security: [{ bearerAuth: [] }],
-    },
-  }, async (request, reply) => {
+  app.post('/2fa/verify-setup', { preHandler: [app.authenticate], schema: { tags: ['Auth'], summary: 'Verify 2FA setup', security: [{ bearerAuth: [] }] } }, async (request, reply) => {
     const user = request.user!;
     const data = setup2FASchema.parse(request.body);
-
     const isValid = await verify2FASetup(user.id, data.token);
-
-    if (!isValid) {
-      throw app.httpErrors.badRequest('Invalid 2FA token');
-    }
-
-    // Log 2FA enabled
-    logAuditEvent({
-      actorId: user.id,
-      action: '2fa_enabled',
-      resource: 'user',
-      resourceId: user.id,
-      success: true,
-      ipAddress: request.ip,
-    });
-
+    if (!isValid) throw app.httpErrors.badRequest('Invalid 2FA token');
+    logAuditEvent({ actorId: user.id, action: '2fa_enabled', resource: 'user', resourceId: user.id, success: true, ipAddress: request.ip });
     reply.send({ message: '2FA enabled successfully' });
   });
 
-  /**
-   * Disable 2FA
-   */
-  app.post('/2fa/disable', {
-    preHandler: [app.authenticate],
-    schema: {
-      tags: ['Auth'],
-      summary: 'Disable 2FA',
-      security: [{ bearerAuth: [] }],
-    },
-  }, async (request, reply) => {
+  app.post('/2fa/disable', { preHandler: [app.authenticate], schema: { tags: ['Auth'], summary: 'Disable 2FA', security: [{ bearerAuth: [] }] } }, async (request, reply) => {
     const user = request.user!;
     const data = verify2FASchema.parse(request.body);
-
-    // Verify current 2FA code before disabling
     const verification = await verify2FA(user.id, data.token);
-    if (!verification.isValid) {
-      throw app.httpErrors.badRequest('Invalid 2FA token');
-    }
-
+    if (!verification.isValid) throw app.httpErrors.badRequest('Invalid 2FA token');
     await disable2FA(user.id);
-
-    // Log 2FA disabled
-    logAuditEvent({
-      actorId: user.id,
-      action: '2fa_disabled',
-      resource: 'user',
-      resourceId: user.id,
-      success: true,
-      ipAddress: request.ip,
-    });
-
+    logAuditEvent({ actorId: user.id, action: '2fa_disabled', resource: 'user', resourceId: user.id, success: true, ipAddress: request.ip });
     reply.send({ message: '2FA disabled successfully' });
   });
 
-  /**
-   * Get 2FA status
-   */
-  app.get('/2fa/status', {
-    preHandler: [app.authenticate],
-    schema: {
-      tags: ['Auth'],
-      summary: 'Get 2FA status',
-      security: [{ bearerAuth: [] }],
-    },
-  }, async (request, reply) => {
+  app.get('/2fa/status', { preHandler: [app.authenticate], schema: { tags: ['Auth'], summary: 'Get 2FA status', security: [{ bearerAuth: [] }] } }, async (request, reply) => {
     const user = request.user!;
     const status = await get2FAStatus(user.id);
     reply.send(status);
   });
 
-  /**
-   * Regenerate 2FA backup codes
-   */
-  app.post('/2fa/backup-codes', {
-    preHandler: [app.authenticate],
-    schema: {
-      tags: ['Auth'],
-      summary: 'Regenerate 2FA backup codes',
-      security: [{ bearerAuth: [] }],
-    },
-  }, async (request, reply) => {
+  app.post('/2fa/backup-codes', { preHandler: [app.authenticate], schema: { tags: ['Auth'], summary: 'Regenerate 2FA backup codes', security: [{ bearerAuth: [] }] } }, async (request, reply) => {
     const user = request.user!;
     const data = verify2FASchema.parse(request.body);
-
-    // Verify current 2FA code before regenerating
     const verification = await verify2FA(user.id, data.token);
-    if (!verification.isValid) {
-      throw app.httpErrors.badRequest('Invalid 2FA token');
-    }
-
+    if (!verification.isValid) throw app.httpErrors.badRequest('Invalid 2FA token');
     const backupCodes = await regenerateBackupCodes(user.id);
-
-    // Log backup codes regenerated
-    logAuditEvent({
-      actorId: user.id,
-      action: '2fa_backup_codes_regenerated',
-      resource: 'user',
-      resourceId: user.id,
-      success: true,
-      ipAddress: request.ip,
-    });
-
+    logAuditEvent({ actorId: user.id, action: '2fa_backup_codes_regenerated', resource: 'user', resourceId: user.id, success: true, ipAddress: request.ip });
     reply.send({ backupCodes });
   });
 
   /**
-   * Get current user info
+   * Get current user info (decrypt sensitive fields)
    */
-  app.get('/me', {
-    preHandler: [app.authenticate],
-    schema: {
-      tags: ['Auth'],
-      summary: 'Get current user information',
-      security: [{ bearerAuth: [] }],
-    },
-  }, async (request, reply) => {
+  app.get('/me', { preHandler: [app.authenticate], schema: { tags: ['Auth'], summary: 'Get current user information', security: [{ bearerAuth: [] }] } }, async (request, reply) => {
     const user = request.user!;
+    const userData = await prisma.user.findUnique({ where: { id: user.id }, include: { preferences: true } });
+    if (!userData) throw app.httpErrors.notFound('User not found');
 
-    const userData = await prisma.user.findUnique({
-      where: { id: user.id },
-      include: {
-        preferences: true,
-      },
-    });
-
-    if (!userData) {
-      throw app.httpErrors.notFound('User not found');
+    let phone: string | null = null;
+    if (userData.phone) {
+      try { phone = await decrypt(userData.phone); } catch { phone = null; }
     }
 
     reply.send({
@@ -602,7 +392,7 @@ export default async function authRoutes(app: FastifyInstance) {
       email: userData.email,
       firstName: userData.firstName,
       lastName: userData.lastName,
-      phone: userData.phone,
+      phone,
       role: userData.role,
       isPremium: userData.isPremium,
       premiumUntil: userData.premiumUntil,
@@ -616,4 +406,90 @@ export default async function authRoutes(app: FastifyInstance) {
       lastLoginAt: userData.lastLoginAt,
     });
   });
+
+  /**
+   * OAuth2/OIDC providers (Google & Apple scaffolding)
+   */
+  try {
+    const oauth2 = await import('@fastify/oauth2');
+
+    // Google OAuth2
+    if (app.config.oauth.google.clientId && app.config.oauth.google.clientSecret) {
+      await app.register(oauth2.default, {
+        name: 'googleOAuth2',
+        scope: ['profile', 'email'],
+        credentials: {
+          client: {
+            id: app.config.oauth.google.clientId!,
+            secret: app.config.oauth.google.clientSecret!,
+          },
+          auth: oauth2.GOOGLE_CONFIGURATION,
+        },
+        startRedirectPath: '/api/auth/oauth/google',
+        callbackUri: '/api/auth/oauth/google/callback',
+      } as any);
+
+      app.get('/oauth/google/callback', async (request, reply) => {
+        const token = await (app as any).googleOAuth2.getAccessTokenFromAuthorizationCodeFlow(request);
+        const accessToken = token.token.access_token as string;
+        const profileRes = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const profile = await profileRes.json();
+        const email = profile.email as string;
+        const firstName = profile.given_name || 'User';
+        const lastName = profile.family_name || 'Google';
+
+        // Upsert user
+        const user = await prisma.user.upsert({
+          where: { email },
+          update: { emailVerified: true, firstName, lastName },
+          create: { email, firstName, lastName, emailVerified: true, role: 'USER' },
+        });
+
+        const sessionId = generateSecureToken();
+        const tokens = await createTokenPair({ sub: user.id, email: user.email, role: user.role, sessionId });
+        setRefreshCookie(reply, tokens.refreshToken);
+
+        reply.send({
+          user: { id: user.id, email: user.email, firstName: user.firstName, lastName: user.lastName, role: user.role },
+          tokens: { ...tokens, refreshToken: undefined },
+        });
+      });
+    } else {
+      logger.warn('Google OAuth2 not configured');
+    }
+
+    // Apple OAuth2 (scaffold only)
+    if (app.config.oauth.apple.clientId && app.config.oauth.apple.clientSecret) {
+      await app.register(oauth2.default, {
+        name: 'appleOAuth2',
+        scope: ['name', 'email'],
+        credentials: {
+          client: {
+            id: app.config.oauth.apple.clientId!,
+            secret: app.config.oauth.apple.clientSecret!,
+          },
+          auth: {
+            tokenHost: 'https://appleid.apple.com',
+            tokenPath: '/auth/token',
+            authorizeHost: 'https://appleid.apple.com',
+            authorizePath: '/auth/authorize',
+          },
+        },
+        startRedirectPath: '/api/auth/oauth/apple',
+        callbackUri: '/api/auth/oauth/apple/callback',
+      } as any);
+
+      app.get('/oauth/apple/callback', async (request, reply) => {
+        // NOTE: Real Apple Sign-In requires JWT client secret and decoding id_token.
+        // Here we provide a minimal scaffold and return 501 to indicate further setup needed.
+        reply.code(501).send({ error: 'APPLE_OAUTH_SETUP_REQUIRED', message: 'Apple OAuth requires additional configuration' });
+      });
+    } else {
+      logger.warn('Apple OAuth2 not configured');
+    }
+  } catch (e) {
+    logger.warn('OAuth2 plugins not available or failed to load', e);
+  }
 }
