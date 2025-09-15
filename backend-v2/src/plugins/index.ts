@@ -31,11 +31,24 @@ export async function registerPlugins(app: FastifyInstance): Promise&lt;void&gt;
     crossOriginEmbedderPolicy: false, // Allow embedding for maps
   });
 
-  // CORS configuration
+  // Cookie support (for CSRF double-submit and refresh token cookie)
+  await app.register(import('@fastify/cookie'), {
+    hook: 'onRequest',
+    secret: config.security.encryption.key,
+    parseOptions: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: config.app.isProduction,
+    },
+  });
+
+  // CORS configuration (strict)
   await app.register(import('@fastify/cors'), {
-    origin: config.server.corsOrigins.includes('*') 
-      ? true 
-      : config.server.corsOrigins,
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // allow server-to-server
+      const allowed = config.server.corsOrigins.includes('*') || config.server.corsOrigins.includes(origin);
+      cb(allowed ? null : new Error('CORS not allowed'), allowed);
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
@@ -48,6 +61,7 @@ export async function registerPlugins(app: FastifyInstance): Promise&lt;void&gt;
       'X-API-Key',
       'X-CSRF-Token',
     ],
+    exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
   });
 
   // Rate limiting
