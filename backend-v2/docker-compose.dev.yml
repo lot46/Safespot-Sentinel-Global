@@ -1,0 +1,37 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgis/postgis:15-3.4
+    container_name: ssg_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ssg
+      POSTGRES_PASSWORD: ssgpass
+      POSTGRES_DB: ssg_v2
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./scripts/postgis-init.sql:/docker-entrypoint-initdb.d/001-postgis.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ssg"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ssg_redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:
