@@ -41,7 +41,7 @@
     "@fastify/static": "^6.12.0",
     "@fastify/swagger": "^8.12.2",
     "@fastify/swagger-ui": "^2.1.0",
-    "@fastify/websocket": "^8.5.0",
+    "@fastify/websocket": "^7.2.0",
     "@opentelemetry/api": "^1.7.0",
     "@opentelemetry/auto-instrumentations-node": "^0.40.3",
     "@opentelemetry/exporter-jaeger": "^1.17.2",
