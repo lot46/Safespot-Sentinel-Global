@@ -302,10 +302,11 @@ export async function csrfMiddleware(
     return;
   }
 
+  // Double-submit cookie: token must match header and cookie
   const csrfToken = request.headers['x-csrf-token'] as string;
-  const sessionCSRF = request.headers['x-session-csrf'] as string;
+  const csrfCookie = (request.cookies && (request.cookies['ssg_csrf'] as string)) || '';
 
-  if (!csrfToken || !sessionCSRF || csrfToken !== sessionCSRF) {
+  if (!csrfToken || !csrfCookie || csrfToken !== csrfCookie) {
     logSecurityEvent({
       type: 'suspicious_activity',
       severity: 'high',
