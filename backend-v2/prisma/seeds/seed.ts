@@ -77,7 +77,7 @@ async function main() {
       id: 'seed-user-contact-1',
       userId: user.id,
       type: 'EMAIL',
-      value: 'contact@example.com',
+      value: await encrypt('contact@example.com'),
       label: 'Parent',
       relationship: 'Family',
       priority: 1,
