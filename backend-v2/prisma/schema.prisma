@@ -106,6 +106,7 @@ model User {
   reports          Report[]
   sosSessions      SOSSession[]
   payments         Payment[]
+  votes            ReportVote[]
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
