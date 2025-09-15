@@ -26,22 +26,50 @@ export function getPrisma(): PrismaClient {
       },
     });
 
-    // Add query logging middleware
-    if (config.app.isDevelopment) {
-      prisma.$use(async (params, next) => {
-        const before = Date.now();
-        const result = await next(params);
-        const after = Date.now();
-        
+    // Transparent encryption middleware for sensitive fields
+    prisma.$use(async (params, next) => {
+      if (params.action === 'create' || params.action === 'update') {
+        const data = params.args?.data;
+        if (data) {
+          const { encrypt } = await import('../security/encryption.js');
+          // User sensitive fields
+          if (params.model === 'User') {
+            if (typeof data.phone === 'string') {
+              data.phone = await encrypt(data.phone);
+            }
+            if (typeof data.twoFASecret === 'string') {
+              data.twoFASecret = await encrypt(data.twoFASecret);
+            }
+          }
+          // UserPreferences sosMessage
+          if (params.model === 'UserPreferences') {
+            if (typeof data.sosMessage === 'string') {
+              data.sosMessage = await encrypt(data.sosMessage);
+            }
+          }
+          // UserContact value
+          if (params.model === 'UserContact') {
+            if (typeof data.value === 'string') {
+              data.value = await encrypt(data.value);
+            }
+          }
+        }
+      }
+
+      const before = Date.now();
+      const result = await next(params);
+      const after = Date.now();
+
+      if (config.app.isDevelopment) {
         logger.debug({
           model: params.model,
           action: params.action,
           duration: after - before,
         }, `Database query: ${params.model}.${params.action}`);
-        
-        return result;
-      });
-    }
+      }
+
+      return result;
+    });
   }
   
   return prisma;
