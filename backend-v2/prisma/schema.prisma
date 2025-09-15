@@ -119,7 +119,7 @@ model UserPreferences {
   alertRadiusM    Int      @default(2000)
   categories      Json?
   theme           Theme    @default(LIGHT)
-  sosMessage      String?
+  sosMessage      String?   // encrypted at rest
   pushEnabled     Boolean  @default(true)
   emailEnabled    Boolean  @default(true)
   smsEnabled      Boolean  @default(false)
