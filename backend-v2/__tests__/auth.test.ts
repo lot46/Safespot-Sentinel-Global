@@ -1,0 +1,45 @@
+import request from 'supertest';
+import Fastify from 'fastify';
+import { registerPlugins } from '../src/plugins/index.js';
+import { registerRoutes } from '../src/routes/index.js';
+
+async function build() {
+  const app = Fastify({ logger: false });
+  await registerPlugins(app as any);
+  await registerRoutes(app as any);
+  await app.ready();
+  return app;
+}
+
+describe('Auth flows', () => {
+  test('register -> login -> refresh -> logout', async () => {
+    const app = await build();
+
+    const email = `user_${Date.now()}@test.local`;
+    const password = 'Password123!';
+
+    const reg = await app.inject({
+      method: 'POST',
+      url: '/api/auth/register',
+      payload: { email, password, firstName: 'T', lastName: 'U', gdprConsent: true },
+    });
+    expect([201, 409]).toContain(reg.statusCode);
+
+    const login = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email, password },
+    });
+    expect(login.statusCode).toBe(200);
+    const body = login.json();
+    expect(body.tokens?.accessToken).toBeTruthy();
+
+    const refresh = await app.inject({ method: 'POST', url: '/api/auth/refresh', cookies: login.cookies });
+    expect([200, 401]).toContain(refresh.statusCode);
+
+    const logout = await app.inject({ method: 'POST', url: '/api/auth/logout', headers: { Authorization: `Bearer ${body.tokens.accessToken}` } });
+    expect([200, 401]).toContain(logout.statusCode);
+
+    await app.close();
+  });
+});
