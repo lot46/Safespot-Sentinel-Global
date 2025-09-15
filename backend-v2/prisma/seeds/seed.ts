@@ -46,6 +46,7 @@ async function main() {
   const userPassword = 'User123!@#';
   const userHash = await bcrypt.hash(userPassword, 12);
 
+  const encPhone = await encrypt('+33123456789');
   const user = await prisma.user.upsert({
     where: { email: userEmail },
     update: {},
