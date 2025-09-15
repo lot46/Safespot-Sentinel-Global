@@ -11,7 +11,7 @@ from datetime import datetime
 import time
 
 class SafeSpotAPITester:
-    def __init__(self, base_url="https://sentinel-shield-3.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://sentinel-app-2.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
         self.user_data = None
@@ -350,7 +350,7 @@ class SafeSpotAPITester:
 def main():
     """Main test execution"""
     print("SafeSpot Sentinel Global - Backend API Test Suite")
-    print(f"Testing against: https://sentinel-shield-3.preview.emergentagent.com/api")
+    print(f"Testing against: https://sentinel-app-2.preview.emergentagent.com/api")
     print(f"Started at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print()
     
