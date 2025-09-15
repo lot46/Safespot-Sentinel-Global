@@ -4,6 +4,7 @@
  */
 
 import Fastify from 'fastify';
+import { randomUUID } from 'crypto';
 import { config } from './config/index.js';
 import { logger } from './utils/logger.js';
 import { initializeDatabase } from './database/index.js';
@@ -24,7 +25,7 @@ async function buildApp() {
     bodyLimit: config.server.maxPayloadSize,
     requestIdHeader: 'x-request-id',
     requestIdLogLabel: 'reqId',
-    genReqId: () => crypto.randomUUID(),
+    genReqId: () => randomUUID(),
   });
 
   // Initialize observability first

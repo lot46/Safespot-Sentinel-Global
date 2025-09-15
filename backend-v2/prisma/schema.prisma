@@ -1,38 +1,32 @@
-// SafeSpot Sentinel Global V2 - Database Schema
-// PostgreSQL + PostGIS with enterprise security & GDPR compliance
+// SafeSpot Sentinel Global V2 - Prisma Schema
+// PostgreSQL 15 + PostGIS (geometry stored as Unsupported type)
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions"]
-  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  extensions = [postgis(version: "3.4")]
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// =============================================================================
-// ENUMS
-// =============================================================================
-
-enum UserRole {
+// Enums
+enum Role {
   USER
   MODERATOR
   ADMIN
-}
-
-enum ContactType {
-  EMAIL
-  SMS
-  PUSH
 }
 
 enum Theme {
   LIGHT
   DARK
   AUTO
+}
+
+enum ContactType {
+  EMAIL
+  SMS
+  PUSH
 }
 
 enum ReportType {
@@ -49,26 +43,13 @@ enum ReportType {
 enum ReportStatus {
   PENDING
   VALIDATED
-  REJECTED
   FLAGGED
+  REJECTED
 }
 
 enum VoteType {
   CONFIRM
   DISPUTE
-}
-
-enum ZoneLevel {
-  GREEN
-  ORANGE
-  RED
-}
-
-enum ZoneSource {
-  COMMUNITY
-  OFFICIAL
-  AI
-  WEATHER
 }
 
 enum SOSState {
@@ -77,494 +58,169 @@ enum SOSState {
   CANCELLED
 }
 
-enum PaymentPlan {
-  FREE
-  PREMIUM_MONTHLY
-  PREMIUM_YEARLY
-}
-
 enum PaymentProvider {
   STRIPE
-  APPLE
-  GOOGLE
 }
 
 enum PaymentStatus {
   PENDING
   ACTIVE
   CANCELLED
-  REFUNDED
   FAILED
 }
 
-enum NotificationType {
-  SOS_ALERT
-  REPORT_NEARBY
-  WEATHER_WARNING
-  SYSTEM_UPDATE
-  PAYMENT_SUCCESS
-  PAYMENT_FAILED
+enum Plan {
+  PREMIUM_MONTHLY
+  PREMIUM_YEARLY
 }
 
-// =============================================================================
-// USER MANAGEMENT & AUTH
-// =============================================================================
-
+// Models
 model User {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email         String   @unique @db.VarChar(255)
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String?
+  firstName     String
+  lastName      String
+  phone         String?  @unique
+  role          Role     @default(USER)
+  isActive      Boolean  @default(true)
+  isBanned      Boolean  @default(false)
+  isPremium     Boolean  @default(false)
+  premiumUntil  DateTime?
   emailVerified Boolean  @default(false)
-  phone         String?  @unique @db.VarChar(20)
   phoneVerified Boolean  @default(false)
-  passwordHash  String?  @map("password_hash") @db.VarChar(255)
-  
-  // Profile
-  firstName     String   @map("first_name") @db.VarChar(100)
-  lastName      String   @map("last_name") @db.VarChar(100)
-  avatar        String?  @db.Text
-  locale        String   @default("fr-FR") @db.VarChar(10)
-  timezone      String   @default("Europe/Paris") @db.VarChar(50)
-  
-  // Security & Auth
-  role          UserRole @default(USER)
-  isActive      Boolean  @default(true) @map("is_active")
-  isBanned      Boolean  @default(false) @map("is_banned")
-  bannedReason  String?  @map("banned_reason") @db.Text
-  bannedAt      DateTime? @map("banned_at") @db.Timestamptz
-  
-  // 2FA
-  twoFAEnabled  Boolean  @default(false) @map("twofa_enabled")
-  twoFASecret   String?  @map("twofa_secret") @db.VarChar(255) // Encrypted
-  twoFABackupCodes String[] @map("twofa_backup_codes") // Encrypted array
-  
-  // OAuth Providers
-  providers     Json?    @db.JsonB // {google: {id, email}, apple: {id}}
-  
-  // Premium
-  isPremium     Boolean  @default(false) @map("is_premium")
-  premiumUntil  DateTime? @map("premium_until") @db.Timestamptz
-  
-  // Privacy & GDPR
-  gdprConsent   Json?    @map("gdpr_consent") @db.JsonB
-  dataRetention Boolean  @default(true) @map("data_retention")
-  marketingConsent Boolean @default(false) @map("marketing_consent")
-  
-  // Audit
-  lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz
-  lastLoginIP   String?   @map("last_login_ip") @db.Inet
-  loginCount    Int       @default(0) @map("login_count")
-  
-  // Timestamps
-  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+  twoFAEnabled  Boolean  @default(false)
+  twoFASecret   String?
+  locale        String?  @default("fr-FR")
+  timezone      String?  @default("Europe/Paris")
+  lastLoginAt   DateTime?
+  lastLoginIP   String?
+  loginCount    Int      @default(0)
+  gdprConsent   Json?
 
   // Relations
-  contacts      UserContact[]
   preferences   UserPreferences?
+  contacts      UserContact[]
   reports       Report[]
-  reportVotes   ReportVote[]
   sosSessions   SOSSession[]
   payments      Payment[]
-  notifications UserNotification[]
-  sessions      UserSession[]
-  auditLogs     AuditLog[]
 
-  @@map("users")
-  @@index([email])
-  @@index([phone])
-  @@index([createdAt])
-  @@index([isPremium])
-}
-
-model UserContact {
-  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId     String      @map("user_id") @db.Uuid
-  type       ContactType
-  value      String      @db.VarChar(255) // Encrypted for sensitive data
-  label      String      @db.VarChar(100)
-  relationship String?   @db.VarChar(50)
-  verified   Boolean     @default(false)
-  priority   Int         @default(1) // 1=highest for SOS
-  isActive   Boolean     @default(true) @map("is_active")
-  
-  // Timestamps
-  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt  DateTime    @updatedAt @map("updated_at") @db.Timestamptz
-
-  // Relations
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("user_contacts")
-  @@index([userId])
-  @@index([type])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
 }
 
 model UserPreferences {
-  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId          String   @unique @map("user_id") @db.Uuid
-  alertRadiusM    Int      @default(2000) @map("alert_radius_m")
-  categories      Json     @default("{}") @db.JsonB // {crime: true, weather: false, ...}
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id])
+  alertRadiusM    Int      @default(2000)
+  categories      Json?
   theme           Theme    @default(LIGHT)
-  sosMessage      String?  @map("sos_message") @db.Text
-  language        String   @default("fr") @db.VarChar(5)
-  
-  // Notification preferences
-  pushEnabled     Boolean  @default(true) @map("push_enabled")
-  emailEnabled    Boolean  @default(true) @map("email_enabled")
-  smsEnabled      Boolean  @default(false) @map("sms_enabled")
-  
-  // Privacy settings
-  locationSharing Boolean  @default(true) @map("location_sharing")
-  profileVisible  Boolean  @default(false) @map("profile_visible")
-  
-  // Timestamps
-  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  sosMessage      String?
+  pushEnabled     Boolean  @default(true)
+  emailEnabled    Boolean  @default(true)
+  smsEnabled      Boolean  @default(false)
+  locationSharing Boolean  @default(false)
+  profileVisible  Boolean  @default(true)
 
-  // Relations
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("user_preferences")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
-model UserSession {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId       String    @map("user_id") @db.Uuid
-  token        String    @unique @db.VarChar(255) // Hashed
-  refreshToken String?   @map("refresh_token") @db.VarChar(255) // Hashed
-  deviceInfo   Json?     @map("device_info") @db.JsonB
-  ipAddress    String    @map("ip_address") @db.Inet
-  userAgent    String?   @map("user_agent") @db.Text
-  isRevoked    Boolean   @default(false) @map("is_revoked")
-  
-  // Timestamps
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  expiresAt    DateTime  @map("expires_at") @db.Timestamptz
-  lastUsedAt   DateTime? @map("last_used_at") @db.Timestamptz
+model UserContact {
+  id           String      @id @default(uuid())
+  userId       String
+  user         User        @relation(fields: [userId], references: [id])
+  type         ContactType
+  value        String
+  label        String
+  relationship String?
+  priority     Int         @default(1)
+  verified     Boolean     @default(false)
+  isActive     Boolean     @default(true)
 
-  // Relations
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
-  @@map("user_sessions")
-  @@index([userId])
-  @@index([expiresAt])
-  @@index([isRevoked])
+  @@index([userId, type])
 }
-
-// =============================================================================
-// REPORTS & COMMUNITY
-// =============================================================================
 
 model Report {
-  id           String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId       String       @map("user_id") @db.Uuid
-  type         ReportType
-  title        String       @db.VarChar(255)
-  description  String       @db.Text
-  
-  // Location (PostGIS)
-  latitude     Float        @db.DoublePrecision
-  longitude    Float        @db.DoublePrecision
-  geom         Unsupported("geometry(Point, 4326)")?
-  address      String?      @db.Text
-  
-  // Media
-  mediaUrls    String[]     @map("media_urls") @default([])
-  mediaHashes  String[]     @map("media_hashes") @default([]) // For deduplication
-  
-  // Moderation & Trust
-  status       ReportStatus @default(PENDING)
-  trustScore   Int          @default(0) @map("trust_score") // 0-100
-  aiModeration Json?        @map("ai_moderation") @db.JsonB
-  moderatedBy  String?      @map("moderated_by") @db.Uuid
-  moderatedAt  DateTime?    @map("moderated_at") @db.Timestamptz
-  
-  // Engagement
-  viewCount    Int          @default(0) @map("view_count")
-  voteCount    Int          @default(0) @map("vote_count")
-  commentCount Int          @default(0) @map("comment_count")
-  
-  // Timestamps
-  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz
-  deletedAt    DateTime?    @map("deleted_at") @db.Timestamptz
-
-  // Relations
+  id           String       @id @default(uuid())
+  userId       String
   user         User         @relation(fields: [userId], references: [id])
+  type         ReportType
+  title        String
+  description  String
+  latitude     Float
+  longitude    Float
+  address      String?
+  geom         Unsupported("geometry")?
+  mediaUrls    String[]
+  trustScore   Int          @default(50)
+  status       ReportStatus @default(PENDING)
+  voteCount    Int          @default(0)
+  viewCount    Int          @default(0)
+  aiModeration Json?
+
   votes        ReportVote[]
 
-  @@map("reports")
-  @@index([userId])
-  @@index([type])
-  @@index([status])
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+
+  @@index([type, status])
   @@index([createdAt])
-  @@index([trustScore])
-  @@index([geom], type: Gist)
 }
 
 model ReportVote {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  reportId  String   @map("report_id") @db.Uuid
-  voterId   String   @map("voter_id") @db.Uuid
-  vote      VoteType
-  comment   String?  @db.Text
-  
-  // Timestamps
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  reportId String
+  voterId  String
+  report   Report @relation(fields: [reportId], references: [id])
+  voter    User   @relation(fields: [voterId], references: [id])
+  vote     VoteType
+  comment  String?
+  createdAt DateTime @default(now())
 
-  // Relations
-  report    Report   @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  voter     User     @relation(fields: [voterId], references: [id])
-
+  @@id([reportId, voterId])
   @@map("report_votes")
-  @@unique([reportId, voterId])
-  @@index([reportId])
-  @@index([voterId])
 }
-
-// =============================================================================
-// ZONES & GEOSPATIAL
-// =============================================================================
-
-model Zone {
-  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String?    @db.VarChar(255)
-  level       ZoneLevel
-  source      ZoneSource
-  description String?    @db.Text
-  
-  // Geometry (PostGIS)
-  geom        Unsupported("geometry(Polygon, 4326)")
-  bounds      Json?      @db.JsonB // Precomputed bbox for faster queries
-  area        Float?     @db.DoublePrecision // Square meters
-  
-  // Validity
-  validFrom   DateTime   @map("valid_from") @db.Timestamptz
-  validTo     DateTime?  @map("valid_to") @db.Timestamptz
-  isActive    Boolean    @default(true) @map("is_active")
-  
-  // Source metadata
-  sourceId    String?    @map("source_id") @db.VarChar(255)
-  sourceData  Json?      @map("source_data") @db.JsonB
-  
-  // Timestamps
-  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz
-
-  @@map("zones")
-  @@index([level])
-  @@index([source])
-  @@index([validFrom, validTo])
-  @@index([geom], type: Gist)
-}
-
-// =============================================================================
-// SOS SYSTEM
-// =============================================================================
 
 model SOSSession {
-  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId         String    @map("user_id") @db.Uuid
-  state          SOSState  @default(ACTIVE)
-  message        String    @db.Text
-  
-  // Location tracking
-  startLocation  Unsupported("geometry(Point, 4326)")?  @map("start_location")
-  lastLocation   Unsupported("geometry(Point, 4326)")?  @map("last_location")
-  locationHistory Json[]   @map("location_history") @default([]) @db.JsonB
-  
-  // Contacts notified
-  contactsNotified String[] @map("contacts_notified") @default([])
-  notificationLog  Json[]   @map("notification_log") @default([]) @db.JsonB
-  
-  // Emergency services
-  emergencyServicesCalled Boolean @default(false) @map("emergency_services_called")
-  emergencyNumber         String? @map("emergency_number") @db.VarChar(20)
-  
-  // Timestamps
-  startedAt      DateTime  @default(now()) @map("started_at") @db.Timestamptz
-  endedAt        DateTime? @map("ended_at") @db.Timestamptz
-  lastHeartbeat  DateTime? @map("last_heartbeat") @db.Timestamptz
+  id               String   @id @default(uuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id])
+  state            SOSState @default(ACTIVE)
+  message          String?
+  startLocation    Unsupported("geometry")?
+  lastLocation     Unsupported("geometry")?
+  locationHistory  Json
+  contactsNotified String[]
+  startedAt        DateTime @default(now())
+  endedAt          DateTime?
+  lastHeartbeat    DateTime?
+  createdAt        DateTime @default(now())
 
-  // Relations
-  user           User      @relation(fields: [userId], references: [id])
-
-  @@map("sos_sessions")
-  @@index([userId])
-  @@index([state])
-  @@index([startedAt])
-  @@index([startLocation], type: Gist)
-  @@index([lastLocation], type: Gist)
+  @@index([userId, state])
 }
-
-// =============================================================================
-// PAYMENTS & SUBSCRIPTIONS
-// =============================================================================
 
 model Payment {
-  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId        String         @map("user_id") @db.Uuid
-  plan          PaymentPlan
-  provider      PaymentProvider
-  
-  // External references
-  externalId    String?        @map("external_id") @db.VarChar(255) // Stripe subscription ID
-  customerId    String?        @map("customer_id") @db.VarChar(255) // Stripe customer ID
-  priceId       String?        @map("price_id") @db.VarChar(255)    // Stripe price ID
-  
-  // Payment details
-  amount        Decimal        @db.Decimal(10, 2)
-  currency      String         @default("EUR") @db.VarChar(3)
-  status        PaymentStatus  @default(PENDING)
-  
-  // Subscription period
-  startedAt     DateTime?      @map("started_at") @db.Timestamptz
-  renewsAt      DateTime?      @map("renews_at") @db.Timestamptz
-  cancelledAt   DateTime?      @map("cancelled_at") @db.Timestamptz
-  
-  // Metadata
-  metadata      Json?          @db.JsonB
-  webhookEvents Json[]         @map("webhook_events") @default([]) @db.JsonB
-  
-  // Timestamps
-  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime       @updatedAt @map("updated_at") @db.Timestamptz
+  id           String          @id @default(uuid())
+  userId       String
+  user         User            @relation(fields: [userId], references: [id])
+  provider     PaymentProvider @default(STRIPE)
+  plan         Plan
+  externalId   String?
+  customerId   String?
+  amount       Decimal         @db.Decimal(10, 2)
+  currency     String          @default("EUR")
+  status       PaymentStatus   @default(PENDING)
+  startedAt    DateTime?
+  renewsAt     DateTime?
+  cancelledAt  DateTime?
+  metadata     Json?
+  createdAt    DateTime        @default(now())
 
-  // Relations
-  user          User           @relation(fields: [userId], references: [id])
-
-  @@map("payments")
-  @@index([userId])
-  @@index([externalId])
-  @@index([status])
-  @@index([renewsAt])
+  @@index([userId, status])
 }
-
-// =============================================================================
-// NOTIFICATIONS
-// =============================================================================
-
-model UserNotification {
-  id        String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId    String           @map("user_id") @db.Uuid
-  type      NotificationType
-  title     String           @db.VarChar(255)
-  message   String           @db.Text
-  
-  // Delivery
-  channels  String[]         @default([]) // push, email, sms
-  sentAt    DateTime?        @map("sent_at") @db.Timestamptz
-  readAt    DateTime?        @map("read_at") @db.Timestamptz
-  
-  // Context
-  metadata  Json?            @db.JsonB
-  actionUrl String?          @map("action_url") @db.Text
-  
-  // Timestamps
-  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz
-  expiresAt DateTime?        @map("expires_at") @db.Timestamptz
-
-  // Relations
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("user_notifications")
-  @@index([userId])
-  @@index([type])
-  @@index([sentAt])
-  @@index([expiresAt])
-}
-
-// =============================================================================
-// AUDIT & SECURITY
-// =============================================================================
-
-model AuditLog {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  actorId    String?   @map("actor_id") @db.Uuid
-  actorRole  String?   @map("actor_role") @db.VarChar(50)
-  action     String    @db.VarChar(100)
-  resource   String    @db.VarChar(100)
-  resourceId String?   @map("resource_id") @db.Uuid
-  
-  // Context
-  ipHash     String?   @map("ip_hash") @db.VarChar(64) // SHA-256 hashed
-  userAgent  String?   @map("user_agent") @db.VarChar(64) // SHA-256 hashed
-  metadata   Json?     @db.JsonB
-  
-  // Result
-  success    Boolean   @default(true)
-  errorCode  String?   @map("error_code") @db.VarChar(50)
-  errorMessage String? @map("error_message") @db.Text
-  
-  // Timestamps
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
-
-  // Relations
-  actor      User?     @relation(fields: [actorId], references: [id])
-
-  @@map("audit_logs")
-  @@index([actorId])
-  @@index([action])
-  @@index([resource])
-  @@index([createdAt])
-  @@index([ipHash])
-}
-
-model SecurityEvent {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  type        String   @db.VarChar(50) // failed_login, suspicious_activity, rate_limit_exceeded
-  severity    String   @db.VarChar(20) // low, medium, high, critical
-  source      String   @db.VarChar(100) // IP, user_id, etc.
-  description String   @db.Text
-  
-  // Context
-  ipAddress   String?  @map("ip_address") @db.Inet
-  userAgent   String?  @map("user_agent") @db.Text
-  userId      String?  @map("user_id") @db.Uuid
-  metadata    Json?    @db.JsonB
-  
-  // Resolution
-  resolved    Boolean  @default(false)
-  resolvedBy  String?  @map("resolved_by") @db.Uuid
-  resolvedAt  DateTime? @map("resolved_at") @db.Timestamptz
-  
-  // Timestamps
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-
-  @@map("security_events")
-  @@index([type])
-  @@index([severity])
-  @@index([source])
-  @@index([createdAt])
-  @@index([resolved])
-}
-
-// =============================================================================
-// SYSTEM & CONFIGURATION
-// =============================================================================
-
-model SystemConfig {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  key         String   @unique @db.VarChar(100)
-  value       Json     @db.JsonB
-  description String?  @db.Text
-  isPublic    Boolean  @default(false) @map("is_public")
-  
-  // Timestamps
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
-
-  @@map("system_config")
-  @@index([key])
-}
-
-// =============================================================================
-// INDEXES FOR PERFORMANCE
-// =============================================================================
-
-// Additional spatial indexes will be created in migration files
-// CREATE INDEX CONCURRENTLY reports_location_idx ON reports USING GIST (geom);
-// CREATE INDEX CONCURRENTLY zones_bounds_idx ON zones USING GIST (geom);
-// CREATE INDEX CONCURRENTLY sos_sessions_location_idx ON sos_sessions USING GIST (start_location, last_location);

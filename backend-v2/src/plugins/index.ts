@@ -6,25 +6,26 @@
 import { FastifyInstance } from 'fastify';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 /**
  * Register all Fastify plugins
  */
-export async function registerPlugins(app: FastifyInstance): Promise<void> {
+export async function registerPlugins(app: FastifyInstance): Promise&lt;void&gt; {
   // Security headers
   await app.register(import('@fastify/helmet'), {
     contentSecurityPolicy: {
       directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https:"],
-        scriptSrc: ["'self'", "'unsafe-eval'"],
-        imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", "wss:", "https:"],
-        fontSrc: ["'self'", "https:"],
-        objectSrc: ["'none'"],
-        mediaSrc: ["'self'", "https:"],
-        frameSrc: ["'none'"],
-        frameAncestors: ["'none'"],
+        defaultSrc: ['\'self\''],
+        styleSrc: ['\'self\'', '\'unsafe-inline\'', 'https:'],
+        scriptSrc: ['\'self\'', '\'unsafe-eval\''],
+        imgSrc: ['\'self\'', 'data:', 'https:'],
+        connectSrc: ['\'self\'', 'wss:', 'https:'],
+        fontSrc: ['\'self\'', 'https:'],
+        objectSrc: ['\'none\''],
+        mediaSrc: ['\'self\'', 'https:'],
+        frameSrc: ['\'none\''],
+        frameAncestors: ['\'none\''],
       },
     },
     crossOriginEmbedderPolicy: false, // Allow embedding for maps
@@ -55,10 +56,10 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
     timeWindow: config.security.rateLimit.window,
     skipSuccessfulRequests: true,
     skipOnError: true,
-    keyGenerator: (request) => {
-      return request.headers['x-forwarded-for'] as string || request.ip;
+    keyGenerator: (request) =&gt; {
+      return (request.headers['x-forwarded-for'] as string) || request.ip;
     },
-    errorResponseBuilder: (request, context) => {
+    errorResponseBuilder: (request, context) =&gt; {
       return {
         error: {
           code: 'RATE_LIMIT_EXCEEDED',
@@ -87,6 +88,12 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
     },
   });
 
+  // Decorate fastify with an `authenticate` preHandler that enforces auth on a route
+  app.decorate('authenticate', async (request: any, reply: any) =&gt; {
+    request.requireAuth = true;
+    await authMiddleware(request, reply);
+  });
+
   // Multipart support for file uploads
   await app.register(import('@fastify/multipart'), {
     limits: {
@@ -103,7 +110,7 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
   await app.register(import('@fastify/websocket'), {
     options: {
       maxPayload: 1024 * 1024, // 1MB max payload
-      verifyClient: (info) => {
+      verifyClient: (info) =&gt; {
         // Basic verification - will be enhanced in WebSocket handler
         return true;
       },
