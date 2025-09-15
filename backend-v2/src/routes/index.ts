@@ -104,6 +104,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   // API routes prefix
   await app.register(async (apiInstance) => {
+    // CSRF protection preHandler for unsafe methods unless using Bearer auth
+    const { csrfMiddleware } = await import('../middleware/auth.js');
+    apiInstance.addHook('preHandler', csrfMiddleware as any);
     // Add authenticate decorator
     apiInstance.decorate('authenticate', (await import('../middleware/auth.js')).authMiddleware as any);
     
