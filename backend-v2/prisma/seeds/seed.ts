@@ -55,6 +55,7 @@ async function main() {
       passwordHash: userHash,
       firstName: 'Ava',
       lastName: 'Martin',
+      phone: encPhone,
       role: Role.USER,
       isActive: true,
       emailVerified: true,
