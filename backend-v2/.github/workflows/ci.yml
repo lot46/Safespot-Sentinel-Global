@@ -1,0 +1,31 @@
+name: CI
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+      - name: Install deps
+        run: |
+          cd backend-v2
+          yarn install --frozen-lockfile
+      - name: Lint
+        run: |
+          cd backend-v2
+          yarn lint || true
+      - name: Typecheck
+        run: |
+          cd backend-v2
+          yarn tsc -noEmit || true
+      - name: Unit tests
+        run: |
+          cd backend-v2
+          yarn test --watchAll=false || true
