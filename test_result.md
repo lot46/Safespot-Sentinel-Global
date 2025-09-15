@@ -101,3 +101,74 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+## user_problem_statement: "Rebuild SSG enterprise backend (Node/Fastify/TS + Postgres/PostGIS + Redis + S3 + FCM) with OAuth2, 2FA, RBAC, AI moderation, and observability; keep existing MVP live; gradual cutover."
+
+## backend:
+  - task: "Phase 3 Security & Auth implementation"
+    implemented: true
+    working: "NA"
+    file: "backend-v2/src/routes/auth.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Implemented JWT+refresh (rotation, Redis), 2FA TOTP w/backup codes, RBAC middleware, CSRF double-submit cookie, Zod validation, encryption-at-rest for phone/contacts/2FA, OAuth2 scaffolds for Google/Apple, strict CORS+cookies."
+  - task: "Prisma schema for encrypted fields & PostGIS"
+    implemented: true
+    working: "NA"
+    file: "backend-v2/prisma/schema.prisma"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Added phone, twoFASecret encrypted; contact value encrypted; search hashes for phone/contact; PostGIS Unsupported(geometry) fields present. Migrations pending run."
+  - task: "CSRF cookie + refresh cookie"
+    implemented: true
+    working: "NA"
+    file: "backend-v2/src/middleware/auth.ts"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Double-submit cookie ssg_csrf validated vs X-CSRF-Token header; ssg_refresh set as HttpOnly secure cookie."
+
+## frontend:
+  - task: "Consume CSRF token endpoint /api/auth/csrf"
+    implemented: false
+    working: "NA"
+    file: "frontend/src/hooks/useAuth.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Will add when switching frontend to backend-v2 with feature flag."
+
+## metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: false
+
+## test_plan:
+  current_focus:
+    - "Run Prisma migrate + generate, seed dev DB"
+    - "Auth route smoke tests (register/login/refresh/logout)"
+    - "2FA setup/verify flows"
+    - "RBAC: protect admin endpoints"
+  stuck_tasks:
+    - "None"
+  test_all: false
+  test_priority: "high_first"
+
+## agent_communication:
+  - agent: "main"
+    message: "Phase 3 auth/security implemented at code level. Next, I will run Prisma migrations and then request deep backend tests for auth flows, RBAC, and SOS endpoints."
