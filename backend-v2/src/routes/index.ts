@@ -104,6 +104,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
   // API routes prefix
   await app.register(async (apiInstance) => {
+    // Add authenticate decorator
+    apiInstance.decorate('authenticate', (await import('../middleware/auth.js')).authMiddleware as any);
+    
     // Authentication routes
     await apiInstance.register(
       (await import('./auth.js')).default,
