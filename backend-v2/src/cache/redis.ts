@@ -257,6 +257,11 @@ export async function getSession<T = any>(sessionId: string): Promise<T | null> 
 }
 
 /**
+ */
+export async function deleteSession(sessionId: string): Promise<void> {
+  await deleteCache(`session:${sessionId}`, { prefix: 'auth' });
+}
+
  * Delete session
  */
 export async function deleteSession(sessionId: string): Promise<void> {
