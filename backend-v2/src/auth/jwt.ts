@@ -3,7 +3,7 @@
  * Secure JWT implementation with refresh tokens and revocation
  */
 
-import { SignJWT, jwtVerify, type JWTPayload } from 'jose';
+import { SignJWT, jwtVerify } from 'jose';
 import { config } from '../config/index.js';
 import { logger, logSecurityEvent } from '../utils/logger.js';
 import { setCache, getCache, deleteCache, hasCache } from '../cache/redis.js';
