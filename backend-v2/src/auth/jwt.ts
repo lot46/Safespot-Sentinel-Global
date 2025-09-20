@@ -341,9 +341,12 @@ export function extractTokenFromHeader(authHeader?: string): string | null {
  */
 export function decodeToken(token: string): AppJWTPayload | null {
   try {
-    const [, payloadBase64] = token.split('.');
-    const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
-    return payload as JWTPayload;
+    const parts = token.split('.');
+    if (parts.length < 2) return null;
+    const payloadBase64 = parts[1];
+    const json = Buffer.from(payloadBase64 || '', 'base64').toString('utf-8');
+    const payload = JSON.parse(json || '{}');
+    return payload as AppJWTPayload;
   } catch {
     return null;
   }
