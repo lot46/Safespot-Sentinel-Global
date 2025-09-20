@@ -311,7 +311,7 @@ export async function isUserRevoked(userId: string, tokenIssuedAt: number): Prom
     return tokenIssuedAt < revocationData.timestamp;
     
   } catch (error) {
-    logger.error('User revocation check failed:', { error: error instanceof Error ? error.message : String(error) });
+    logger.error(`User revocation check failed: ${error instanceof Error ? error.message : String(error)}`);
     return false;
   }
 }
