@@ -116,7 +116,7 @@ export async function createRefreshToken(payload: Omit<AppJWTPayload, 'type' | '
 /**
  * Create token pair (access + refresh)
  */
-export async function createTokenPair(payload: Omit<JWTPayload, 'type' | 'iat' | 'exp' | 'jti'>): Promise<TokenPair> {
+export async function createTokenPair(payload: Omit<AppJWTPayload, 'type' | 'iat' | 'exp' | 'jti'>): Promise<TokenPair> {
   const [accessToken, refreshToken] = await Promise.all([
     createAccessToken(payload),
     createRefreshToken(payload),
