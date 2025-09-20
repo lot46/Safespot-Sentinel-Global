@@ -89,7 +89,8 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
   });
 
   // Redis connection
-  await app.register(import('@fastify/redis'), {
+  const fastifyRedis = (await import('@fastify/redis')).default as any;
+  await app.register(fastifyRedis, {
     url: config.redis.url,
     lazyConnect: true,
   });
