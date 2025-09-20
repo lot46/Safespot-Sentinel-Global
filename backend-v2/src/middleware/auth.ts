@@ -51,7 +51,7 @@ export async function authMiddleware(
     
     // Get user details from database
     const user = await prisma.user.findUnique({
-      where: { id: payload.sub },
+      where: { id: payload.sub as string },
       select: {
         id: true,
         email: true,
