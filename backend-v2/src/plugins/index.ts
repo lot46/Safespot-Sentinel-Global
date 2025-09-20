@@ -124,7 +124,7 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
   await app.register(import('@fastify/websocket'), {
     options: {
       maxPayload: 1024 * 1024, // 1MB max payload
-      verifyClient: (info) =&gt; {
+      verifyClient: (info) => {
         // Basic verification - will be enhanced in WebSocket handler
         return true;
       },
