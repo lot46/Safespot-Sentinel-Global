@@ -305,13 +305,13 @@ export async function csrfMiddleware(
       type: 'suspicious_activity',
       severity: 'high',
       source: request.ip,
-      userId: request.user?.id,
+      userId: request.user?.id || '',
       metadata: {
         reason: 'csrf_token_mismatch',
         route: request.url,
         userAgent: request.headers['user-agent'],
       },
-    });
+    } as any);
 
     reply.code(403).send({
       error: {
