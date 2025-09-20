@@ -11,7 +11,7 @@ import { authMiddleware } from '../middleware/auth.js';
 /**
  * Register all Fastify plugins
  */
-export async function registerPlugins(app: FastifyInstance): Promise&lt;void&gt; {
+export async function registerPlugins(app: FastifyInstance): Promise<void> {
   // Security headers
   await app.register(import('@fastify/helmet'), {
     contentSecurityPolicy: {
