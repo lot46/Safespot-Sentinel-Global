@@ -68,7 +68,8 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
   });
 
   // Rate limiting
-  await app.register(import('@fastify/rate-limit'), {
+  const rateLimit = (await import('@fastify/rate-limit')).default as any;
+  await app.register(rateLimit, {
     max: config.security.rateLimit.max,
     timeWindow: config.security.rateLimit.window,
     skipSuccessfulRequests: true,
