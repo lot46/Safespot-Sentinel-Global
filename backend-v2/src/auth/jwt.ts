@@ -288,7 +288,7 @@ export async function revokeAllUserTokens(userId: string): Promise<void> {
       prefix: 'auth'
     });
 
-    logger.info('All user tokens revoked', { userId });
+    logger.info(`All user tokens revoked: ${userId}`);
     
   } catch (error) {
     logger.error('User token revocation failed:', { error: error instanceof Error ? error.message : String(error) });
