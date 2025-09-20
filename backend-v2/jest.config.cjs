@@ -1,7 +1,11 @@
 module.exports = {
   testEnvironment: 'node',
+  preset: 'ts-jest/presets/default-esm',
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', { tsconfig: 'tsconfig.json', useESM: true }],
+    '^.+\\.(ts|tsx)$': ['ts-jest', { 
+      tsconfig: 'tsconfig.json', 
+      useESM: true 
+    }],
   },
   extensionsToTreatAsEsm: ['.ts'],
   testMatch: ['**/__tests__/**/*.test.(ts|js)'],
@@ -11,4 +15,7 @@ module.exports = {
     '^(\.{1,2}/.*)\\.js$': '$1',
   },
   setupFiles: ['<rootDir>/__tests__/setupEnv.ts'],
+  transformIgnorePatterns: [
+    'node_modules/(?!(jose|@fastify|fastify)/)'
+  ],
 };
