@@ -103,7 +103,7 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
   });
 
   // Decorate fastify with an `authenticate` preHandler that enforces auth on a route
-  app.decorate('authenticate', async (request: any, reply: any) =&gt; {
+  app.decorate('authenticate', async (request: any, reply: any) => {
     request.requireAuth = true;
     await authMiddleware(request, reply);
   });
