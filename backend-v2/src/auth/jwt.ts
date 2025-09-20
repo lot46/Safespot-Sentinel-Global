@@ -72,8 +72,8 @@ export async function createAccessToken(payload: Omit<AppJWTPayload, 'type' | 'i
   // Store token ID for potential revocation
   await setCache(`token:${tokenId}`, { 
     type: 'access', 
-    userId: payload.sub, 
-    sessionId: payload.sessionId 
+    userId: String(payload.sub), 
+    sessionId: String(payload.sessionId) 
   }, { 
     ttl: expiresIn,
     prefix: 'auth'
