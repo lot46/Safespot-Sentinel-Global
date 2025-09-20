@@ -139,7 +139,7 @@ export async function verifyAccessToken(token: string): Promise<AppJWTPayload> {
   try {
     const { payload } = await jwtVerify(token, jwtSecret);
     
-    const jwtPayload = payload as JWTPayload;
+    const jwtPayload = payload as unknown as AppJWTPayload;
     
     // Check if token type is correct
     if (jwtPayload.type !== 'access') {
