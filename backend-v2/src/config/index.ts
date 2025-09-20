@@ -81,9 +81,9 @@ const envSchema = z.object({
   PROMETHEUS_ENDPOINT: z.string().url().optional(),
 
   // GDPR & Privacy
-  DATA_RETENTION_REPORTS_MONTHS: z.string().transform(Number).default('18'),
-  DATA_RETENTION_LOGS_MONTHS: z.string().transform(Number).default('6'),
-  DATA_RETENTION_SOS_SESSIONS_DAYS: z.string().transform(Number).default('30'),
+  DATA_RETENTION_REPORTS_MONTHS: z.string().transform(Number).default(18),
+  DATA_RETENTION_LOGS_MONTHS: z.string().transform(Number).default(6),
+  DATA_RETENTION_SOS_SESSIONS_DAYS: z.string().transform(Number).default(30),
   GDPR_DPO_EMAIL: z.string().email().optional(),
 });
 
