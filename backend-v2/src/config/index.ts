@@ -58,7 +58,7 @@ const envSchema = z.object({
 
   // Weather API
   OPENWEATHER_API_KEY: z.string().optional(),
-  WEATHER_UPDATE_INTERVAL: z.string().transform(Number).default('300000'), // 5 minutes
+  WEATHER_UPDATE_INTERVAL: z.string().transform(Number).default(300000), // 5 minutes
 
   // Firebase
   FIREBASE_PROJECT_ID: z.string().optional(),
