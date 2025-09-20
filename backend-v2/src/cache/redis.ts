@@ -8,6 +8,33 @@ import { logger } from '../utils/logger.js';
 import { config } from '../config/index.js';
 
 let redis: Redis;
+// In-memory fallback for tests or when Redis is not initialized
+const memoryStore = new Map<string, { value: string; expireAt?: number }>();
+function memSet(key: string, value: string, ttlSeconds?: number) {
+  const expireAt = ttlSeconds && ttlSeconds > 0 ? Date.now() + ttlSeconds * 1000 : undefined;
+  memoryStore.set(key, { value, expireAt });
+}
+function memGet(key: string): string | null {
+  const item = memoryStore.get(key);
+  if (!item) return null;
+  if (item.expireAt && item.expireAt <= Date.now()) {
+    memoryStore.delete(key);
+    return null;
+  }
+  return item.value;
+}
+function memDel(key: string) {
+  memoryStore.delete(key);
+}
+function memExists(key: string): boolean {
+  const item = memoryStore.get(key);
+  if (!item) return false;
+  if (item.expireAt && item.expireAt <= Date.now()) {
+    memoryStore.delete(key);
+    return false;
+  }
+  return true;
+}
 
 export interface CacheOptions {
   ttl?: number; // Time to live in seconds
