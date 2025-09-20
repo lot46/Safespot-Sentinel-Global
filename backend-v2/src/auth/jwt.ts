@@ -221,7 +221,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<TokenPai
       type: 'suspicious_activity',
       severity: 'medium',
       source: 'jwt_refresh',
-      metadata: { error: error.message }
+      metadata: { error: error instanceof Error ? error.message : String(error) }
     });
     
     throw new Error('Token refresh failed');
