@@ -1,0 +1,15 @@
+process.env.NODE_ENV = 'test';
+process.env.PORT = '8002';
+process.env.APP_NAME = 'SSG V2';
+process.env.APP_VERSION = '2.0.0';
+process.env.LOG_LEVEL = 'error';
+process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgres://user:pass@localhost:5432/db';
+process.env.REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+process.env.JWT_SECRET = 'test_jwt_secret_1234567890123456';
+process.env.JWT_REFRESH_SECRET = 'test_refresh_secret_1234567890123';
+process.env.JWT_ACCESS_EXPIRES_IN = '15m';
+process.env.JWT_REFRESH_EXPIRES_IN = '7d';
+process.env.ENCRYPTION_KEY = '12345678901234567890123456789012';
+process.env.BCRYPT_ROUNDS = '4';
+process.env.CORS_ORIGINS = '*';
+process.env.FRONTEND_URL = 'http://localhost:3000';

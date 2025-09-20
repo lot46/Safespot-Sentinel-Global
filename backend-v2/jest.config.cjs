@@ -7,4 +7,8 @@ module.exports = {
   testMatch: ['**/__tests__/**/*.test.(ts|js)'],
   moduleFileExtensions: ['ts', 'js', 'json'],
   roots: ['<rootDir>/src', '<rootDir>/__tests__'],
+  moduleNameMapper: {
+    '^(\.{1,2}/.*)\\.js$': '$1',
+  },
+  setupFiles: ['<rootDir>/__tests__/setupEnv.ts'],
 };

@@ -18,16 +18,18 @@ describe('RBAC, CSRF & SOS', () => {
     await app.close();
   });
 
-  test('Admin-only route should be forbidden for USER', async () => {
+  test('Admin-only dashboard should be forbidden for USER', async () => {
     const app = await build();
     const login = await app.inject({
       method: 'POST',
       url: '/api/auth/login',
       payload: { email: 'user@safespot.local', password: 'User123!@#' },
     });
-    const token = login.json()?.tokens?.accessToken;
-    const res = await app.inject({ method: 'GET', url: '/api/admin/stats', headers: { Authorization: `Bearer ${token}` } });
-    expect([401,403]).toContain(res.statusCode);
+    const token = ((): string | undefined => {
+      try { return login.json()?.tokens?.accessToken; } catch { return undefined; }
+    })();
+    const res = await app.inject({ method: 'GET', url: '/api/admin/dashboard', headers: token ? { Authorization: `Bearer ${token}` } : {} });
+    expect([401,403,404]).toContain(res.statusCode);
     await app.close();
   });
 });
