@@ -15,7 +15,7 @@ module.exports = {
     '^(\\.{1,2}/.*)\\.js$': '$1',
   },
   setupFiles: ['<rootDir>/__tests__/setupEnv.ts'],
-  setupFilesAfterEnv: ['<rootDir>/__tests__/setupPrismaMock.ts'],
+  setupFilesAfterEnv: ['<rootDir>/__tests__/setupPrismaMock.ts', '<rootDir>/__tests__/setupJoseMock.ts'],
   transformIgnorePatterns: [
     'node_modules/(?!(@fastify|fastify|jose|ioredis)/)'
   ],
