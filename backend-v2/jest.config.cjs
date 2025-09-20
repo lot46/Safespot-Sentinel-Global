@@ -17,6 +17,6 @@ module.exports = {
   setupFiles: ['<rootDir>/__tests__/setupEnv.ts'],
   setupFilesAfterEnv: ['<rootDir>/__tests__/setupPrismaMock.ts'],
   transformIgnorePatterns: [
-    'node_modules/(?!(jose|@fastify|fastify)/)'
+    'node_modules/(?!(jose|@fastify|fastify|ioredis)/)'
   ],
 };
