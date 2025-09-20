@@ -4,7 +4,7 @@
  */
 
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { verifyAccessToken, extractTokenFromHeader, JWTPayload } from '../auth/jwt.js';
+import { verifyAccessToken, extractTokenFromHeader, AppJWTPayload } from '../auth/jwt.js';
 import { logger, logSecurityEvent } from '../utils/logger.js';
 import { getPrisma } from '../database/index.js';
 
