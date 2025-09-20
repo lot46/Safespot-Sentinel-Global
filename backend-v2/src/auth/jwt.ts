@@ -166,7 +166,7 @@ export async function verifyRefreshToken(token: string): Promise<AppJWTPayload> 
   try {
     const { payload } = await jwtVerify(token, refreshSecret);
     
-    const jwtPayload = payload as JWTPayload;
+    const jwtPayload = payload as unknown as AppJWTPayload;
     
     // Check if token type is correct
     if (jwtPayload.type !== 'refresh') {
