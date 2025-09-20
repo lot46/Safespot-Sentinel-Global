@@ -271,7 +271,7 @@ export async function revokeUserSession(userId: string, sessionId: string): Prom
     logger.info('User session revoked', { userId, sessionId });
     
   } catch (error) {
-    logger.error('Session revocation failed:', error);
+    logger.error('Session revocation failed:', { error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
