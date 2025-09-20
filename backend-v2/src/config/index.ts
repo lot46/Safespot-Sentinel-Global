@@ -8,7 +8,7 @@ import { z } from 'zod';
 const envSchema = z.object({
   // Application
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().transform(Number).default('8002'),
+  PORT: z.string().transform(Number).default(8002),
   APP_NAME: z.string().default('SafeSpot Sentinel Global V2'),
   APP_VERSION: z.string().default('2.0.0'),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
