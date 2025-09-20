@@ -415,7 +415,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
     // Google OAuth2
     if (app.config.oauth.google.clientId && app.config.oauth.google.clientSecret) {
-      await app.register(oauth2.default, {
+      await app.register((oauth2 as any).default, {
         name: 'googleOAuth2',
         scope: ['profile', 'email'],
         credentials: {
