@@ -206,10 +206,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<TokenPai
       await revokeToken(refreshPayload.jti, 'refresh');
     }
 
-    logger.info('Access token refreshed', { 
-      userId: refreshPayload.sub,
-      sessionId: refreshPayload.sessionId 
-    });
+    logger.info(`Access token refreshed for user ${refreshPayload.sub}, session ${refreshPayload.sessionId}`);
 
     return newTokenPair;
     
