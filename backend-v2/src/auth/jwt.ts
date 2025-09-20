@@ -54,7 +54,7 @@ function parseTimeToSeconds(timeString: string): number {
 /**
  * Create JWT access token
  */
-export async function createAccessToken(payload: Omit<JWTPayload, 'type' | 'iat' | 'exp' | 'jti'>): Promise<string> {
+export async function createAccessToken(payload: Omit<AppJWTPayload, 'type' | 'iat' | 'exp' | 'jti'>): Promise<string> {
   const expiresIn = parseTimeToSeconds(config.security.jwt.accessExpiresIn);
   const tokenId = generateSecureToken(16);
   
