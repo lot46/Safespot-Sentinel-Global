@@ -137,8 +137,8 @@ export async function getCache<T>(
   const fullKey = `${prefix}:${key}`;
   
   try {
-    const cached = await redis.get(fullKey);
-    
+    const cached = redis ? await redis.get(fullKey) : memGet(fullKey);
+
     if (cached === null) {
       return null;
     }
