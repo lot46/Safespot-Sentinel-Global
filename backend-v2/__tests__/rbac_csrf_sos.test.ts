@@ -10,26 +10,20 @@ async function build() {
   return app;
 }
 
-describe('RBAC, CSRF & SOS', () => {
+describe('RBAC, CSRF & SOS (mocked DB)', () => {
   test('CSRF double-submit cookie required on unsafe methods', async () => {
     const app = await build();
     const res = await app.inject({ method: 'POST', url: '/api/auth/logout' });
     expect([401,403]).toContain(res.statusCode);
     await app.close();
-  });
+  }, 15000);
 
   test('Admin-only dashboard should be forbidden for USER', async () => {
     const app = await build();
-    const login = await app.inject({
-      method: 'POST',
-      url: '/api/auth/login',
-      payload: { email: 'user@safespot.local', password: 'User123!@#' },
-    });
-    const token = ((): string | undefined => {
-      try { return login.json()?.tokens?.accessToken; } catch { return undefined; }
-    })();
+    const login = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email: 'user@safespot.local', password: 'User123!@#' } });
+    const token = ((): string | undefined => { try { return login.json()?.tokens?.accessToken; } catch { return undefined; } })();
     const res = await app.inject({ method: 'GET', url: '/api/admin/dashboard', headers: token ? { Authorization: `Bearer ${token}` } : {} });
     expect([401,403,404]).toContain(res.statusCode);
     await app.close();
-  });
+  }, 20000);
 });

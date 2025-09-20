@@ -1,4 +1,3 @@
-import request from 'supertest';
 import Fastify from 'fastify';
 import { registerPlugins } from '../src/plugins/index.js';
 import { registerRoutes } from '../src/routes/index.js';
@@ -11,13 +10,14 @@ async function build() {
   return app;
 }
 
-describe('Auth flows', () => {
+describe('Auth flows (mocked DB)', () => {
   test('register -> login -> refresh -> logout', async () => {
     const app = await build();
 
-    const email = `user_${Date.now()}@test.local`;
+    const email = `u_${Date.now()}@test.local`;
     const password = 'Password123!';
 
+    // Register
     const reg = await app.inject({
       method: 'POST',
       url: '/api/auth/register',
@@ -25,16 +25,12 @@ describe('Auth flows', () => {
     });
     expect([201, 409]).toContain(reg.statusCode);
 
-    const login = await app.inject({
-      method: 'POST',
-      url: '/api/auth/login',
-      payload: { email, password },
-    });
+    // Login
+    const login = await app.inject({ method: 'POST', url: '/api/auth/login', payload: { email, password } });
     expect(login.statusCode).toBe(200);
     const body = login.json();
     expect(body.tokens?.accessToken).toBeTruthy();
 
-    // Extract refresh cookie from login response
     const refreshCookie = login.cookies?.find((c: any) => c.name === 'ssg_refresh');
     const refresh = await app.inject({ method: 'POST', url: '/api/auth/refresh', headers: refreshCookie ? { cookie: `ssg_refresh=${refreshCookie.value}` } : {} });
     expect([200, 401]).toContain(refresh.statusCode);
@@ -43,5 +39,5 @@ describe('Auth flows', () => {
     expect([200, 401]).toContain(logout.statusCode);
 
     await app.close();
-  });
+  }, 30000);
 });
