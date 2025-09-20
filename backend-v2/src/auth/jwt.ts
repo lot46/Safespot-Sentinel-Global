@@ -248,7 +248,7 @@ export async function revokeToken(tokenId: string, type: 'access' | 'refresh' = 
     logger.info('Token revoked', { tokenId, type });
     
   } catch (error) {
-    logger.error('Token revocation failed:', error);
+    logger.error('Token revocation failed:', { error: error instanceof Error ? error.message : String(error) });
     throw error;
   }
 }
