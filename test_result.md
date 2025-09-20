@@ -150,6 +150,9 @@
       - working: false
         agent: "testing"
         comment: "BLOCKED: Cannot test CSRF middleware due to TypeScript compilation errors. Implementation looks correct in code review but requires functional testing."
+      - working: false
+        agent: "testing"
+        comment: "BLOCKED: TypeScript compilation errors fixed, but CSRF tests fail due to Fastify plugin version incompatibility. @fastify/cookie plugin expects Fastify 5.x but project uses 4.29.1. Cannot test CSRF double-submit cookie functionality without compatible versions."
   - task: "Moderation service unit tests"
     implemented: true
     working: true
