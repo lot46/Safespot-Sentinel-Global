@@ -274,7 +274,7 @@ export async function ipRateLimitMiddleware(
     reply.header('X-RateLimit-Reset', new Date(resetTime).toISOString());
 
   } catch (error) {
-    logger.error('Rate limiting error:', error as Error);
+    logger.error({ error }, 'Rate limiting error');
     // Fail open - continue processing request
   }
 }
