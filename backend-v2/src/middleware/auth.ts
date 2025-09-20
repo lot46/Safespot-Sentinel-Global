@@ -13,13 +13,13 @@ const prisma = getPrisma();
 // Extend FastifyRequest to include user information
 declare module 'fastify' {
   interface FastifyRequest {
-    user?: {
+    user: {
       id: string;
       email: string;
       role: string;
       sessionId: string;
       isPremium: boolean;
-    };
+    } | null;
     requireAuth?: boolean;
     requiredRole?: string;
     requiredPermissions?: string[];
