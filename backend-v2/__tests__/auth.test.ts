@@ -34,7 +34,9 @@ describe('Auth flows', () => {
     const body = login.json();
     expect(body.tokens?.accessToken).toBeTruthy();
 
-    const refresh = await app.inject({ method: 'POST', url: '/api/auth/refresh', cookies: login.cookies });
+    // Extract refresh cookie from login response
+    const refreshCookie = login.cookies?.find((c: any) => c.name === 'ssg_refresh');
+    const refresh = await app.inject({ method: 'POST', url: '/api/auth/refresh', headers: refreshCookie ? { cookie: `ssg_refresh=${refreshCookie.value}` } : {} });
     expect([200, 401]).toContain(refresh.statusCode);
 
     const logout = await app.inject({ method: 'POST', url: '/api/auth/logout', headers: { Authorization: `Bearer ${body.tokens.accessToken}` } });
