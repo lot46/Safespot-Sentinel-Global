@@ -181,7 +181,8 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
       },
     });
 
-    await app.register(import('@fastify/swagger-ui'), {
+    const fastifySwaggerUi = (await import('@fastify/swagger-ui')).default as any;
+    await app.register(fastifySwaggerUi, {
       routePrefix: '/docs',
       uiConfig: {
         docExpansion: 'list',
