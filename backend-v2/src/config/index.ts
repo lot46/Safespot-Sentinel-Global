@@ -38,8 +38,8 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().url(),
 
   // Rate Limiting
-  RATE_LIMIT_MAX: z.string().transform(Number).default('100'),
-  RATE_LIMIT_WINDOW: z.string().transform(Number).default('900000'),
+  RATE_LIMIT_MAX: z.string().transform(Number).default(100),
+  RATE_LIMIT_WINDOW: z.string().transform(Number).default(900000),
 
   // File Storage (S3)
   S3_ENDPOINT: z.string().url().optional(),
