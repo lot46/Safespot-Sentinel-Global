@@ -12,7 +12,7 @@ import { generateSecureToken } from '../security/encryption.js';
 const jwtSecret = new TextEncoder().encode(config.security.jwt.secret);
 const refreshSecret = new TextEncoder().encode(config.security.jwt.refreshSecret);
 
-export interface JWTPayload {
+export interface AppJWTPayload {
   sub: string; // User ID
   email: string;
   role: string;
