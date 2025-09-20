@@ -107,15 +107,18 @@
 ## backend:
   - task: "Phase 3 Security & Auth implementation"
     implemented: true
-    working: "NA"
+    working: false
     file: "backend-v2/src/routes/auth.ts"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented JWT+refresh (rotation, Redis), 2FA TOTP w/backup codes, RBAC middleware, CSRF double-submit cookie, Zod validation, encryption-at-rest for phone/contacts/2FA, OAuth2 scaffolds for Google/Apple, strict CORS+cookies."
+      - working: false
+        agent: "testing"
+        comment: "BLOCKED: TypeScript compilation errors prevent testing. Errors in src/auth/jwt.ts (JWTPayload import conflict with local interface, type mismatches) and src/cache/redis.ts (duplicate function definitions, syntax errors). Cannot test auth flows until compilation issues resolved."
   - task: "Prisma schema for encrypted fields & PostGIS"
     implemented: true
     working: "NA"
@@ -127,17 +130,34 @@
       - working: "NA"
         agent: "main"
         comment: "Added phone, twoFASecret encrypted; contact value encrypted; search hashes for phone/contact; PostGIS Unsupported(geometry) fields present. Migrations pending run."
+      - working: "NA"
+        agent: "testing"
+        comment: "Cannot test due to compilation errors in backend-v2 and unreachable Postgres DB. Schema appears complete but requires DB connection for validation."
   - task: "CSRF cookie + refresh cookie"
     implemented: true
-    working: "NA"
+    working: false
     file: "backend-v2/src/middleware/auth.ts"
-    stuck_count: 0
+    stuck_count: 1
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Double-submit cookie ssg_csrf validated vs X-CSRF-Token header; ssg_refresh set as HttpOnly secure cookie."
+      - working: false
+        agent: "testing"
+        comment: "BLOCKED: Cannot test CSRF middleware due to TypeScript compilation errors. Implementation looks correct in code review but requires functional testing."
+  - task: "Moderation service unit tests"
+    implemented: true
+    working: true
+    file: "backend-v2/src/services/moderation.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "PASSED: All 3 unit tests successful. Tests cover appropriate content (flagged=false), inappropriate content (flagged=true), and fallback behavior on API errors. Service handles EMERGENT_LLM_KEY properly with retry logic and graceful degradation."
 
 ## frontend:
   - task: "Consume CSRF token endpoint /api/auth/csrf"
