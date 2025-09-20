@@ -1,7 +1,7 @@
 import request from 'supertest';
 import Fastify from 'fastify';
-import { registerPlugins } from '../src/plugins/index.ts';
-import { registerRoutes } from '../src/routes/index.ts';
+import { registerPlugins } from '../src/plugins/index.js';
+import { registerRoutes } from '../src/routes/index.js';
 
 async function build() {
   const app = Fastify({ logger: false });
