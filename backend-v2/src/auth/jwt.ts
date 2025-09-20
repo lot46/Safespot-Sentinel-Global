@@ -85,7 +85,7 @@ export async function createAccessToken(payload: Omit<AppJWTPayload, 'type' | 'i
 /**
  * Create JWT refresh token
  */
-export async function createRefreshToken(payload: Omit<JWTPayload, 'type' | 'iat' | 'exp' | 'jti'>): Promise<string> {
+export async function createRefreshToken(payload: Omit<AppJWTPayload, 'type' | 'iat' | 'exp' | 'jti'>): Promise<string> {
   const expiresIn = parseTimeToSeconds(config.security.jwt.refreshExpiresIn);
   const tokenId = generateSecureToken(16);
   
