@@ -45,7 +45,8 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
   });
 
   // CORS configuration (strict)
-  await app.register(import('@fastify/cors'), {
+  const cors = (await import('@fastify/cors')).default;
+  await app.register(cors, {
     origin: (origin, cb) => {
       if (!origin) return cb(null, true); // allow server-to-server
       const allowed = config.server.corsOrigins.includes('*') || config.server.corsOrigins.includes(origin);
