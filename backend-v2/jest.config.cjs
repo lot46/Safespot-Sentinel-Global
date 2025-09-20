@@ -19,4 +19,9 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!(jose|@fastify|fastify|ioredis)/)'
   ],
+  globals: {
+    'ts-jest': {
+      useESM: true
+    }
+  }
 };
