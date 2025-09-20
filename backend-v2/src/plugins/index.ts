@@ -13,7 +13,8 @@ import { authMiddleware } from '../middleware/auth.js';
  */
 export async function registerPlugins(app: FastifyInstance): Promise<void> {
   // Security headers
-  await app.register(import('@fastify/helmet'), {
+  const helmet = (await import('@fastify/helmet')).default;
+  await app.register(helmet, {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ['\'self\''],
