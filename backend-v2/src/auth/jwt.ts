@@ -135,7 +135,7 @@ export async function createTokenPair(payload: Omit<AppJWTPayload, 'type' | 'iat
 /**
  * Verify JWT access token
  */
-export async function verifyAccessToken(token: string): Promise<JWTPayload> {
+export async function verifyAccessToken(token: string): Promise<AppJWTPayload> {
   try {
     const { payload } = await jwtVerify(token, jwtSecret);
     
