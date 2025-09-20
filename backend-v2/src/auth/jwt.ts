@@ -339,7 +339,7 @@ export function extractTokenFromHeader(authHeader?: string): string | null {
 /**
  * Decode JWT without verification (for inspecting payload)
  */
-export function decodeToken(token: string): JWTPayload | null {
+export function decodeToken(token: string): AppJWTPayload | null {
   try {
     const [, payloadBase64] = token.split('.');
     const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
