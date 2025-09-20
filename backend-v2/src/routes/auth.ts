@@ -462,7 +462,7 @@ export default async function authRoutes(app: FastifyInstance) {
 
     // Apple OAuth2 (scaffold only)
     if (app.config.oauth.apple.clientId && app.config.oauth.apple.clientSecret) {
-      await app.register(oauth2.default, {
+      await app.register((oauth2 as any).default, {
         name: 'appleOAuth2',
         scope: ['name', 'email'],
         credentials: {
