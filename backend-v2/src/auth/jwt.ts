@@ -181,7 +181,7 @@ export async function verifyRefreshToken(token: string): Promise<AppJWTPayload> 
     return jwtPayload;
     
   } catch (error) {
-    logger.warn('Refresh token verification failed:', { error: error instanceof Error ? error.message : String(error) });
+    logger.warn(`Refresh token verification failed: ${error instanceof Error ? error.message : String(error)}`);
     throw new Error('Invalid or expired refresh token');
   }
 }
