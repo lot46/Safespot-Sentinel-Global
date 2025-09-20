@@ -96,7 +96,8 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
   });
 
   // JWT authentication
-  await app.register(import('@fastify/jwt'), {
+  const fastifyJwt = (await import('@fastify/jwt')).default as any;
+  await app.register(fastifyJwt, {
     secret: config.security.jwt.secret,
     sign: {
       algorithm: 'HS256',
