@@ -242,7 +242,7 @@ export async function revokeToken(tokenId: string, type: 'access' | 'refresh' = 
     // Remove from active tokens
     await deleteCache(`${type}:${tokenId}`, { prefix: 'auth' });
 
-    logger.info('Token revoked', { tokenId, type });
+    logger.info(`Token revoked: ${tokenId} (${type})`);
     
   } catch (error) {
     logger.error('Token revocation failed:', { error: error instanceof Error ? error.message : String(error) });
