@@ -164,7 +164,11 @@ export async function deleteCache(
   const fullKey = `${prefix}:${key}`;
   
   try {
-    await redis.del(fullKey);
+    if (redis) {
+      await redis.del(fullKey);
+    } else {
+      memDel(fullKey);
+    }
     logger.debug(`Cache deleted: ${fullKey}`);
   } catch (error) {
     logger.error('Cache delete error:', error);
