@@ -115,7 +115,7 @@ export async function authMiddleware(
           userAgent: request.headers['user-agent'],
           route: request.url,
         },
-      });
+      } as any);
 
       reply.code(401).send({
         error: {
