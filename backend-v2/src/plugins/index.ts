@@ -77,7 +77,7 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
     keyGenerator: (request: any) => {
       return (request.headers['x-forwarded-for'] as string) || request.ip;
     },
-    errorResponseBuilder: (request, context) => {
+    errorResponseBuilder: (request: any, context: any) => {
       return {
         error: {
           code: 'RATE_LIMIT_EXCEEDED',
