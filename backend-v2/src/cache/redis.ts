@@ -49,7 +49,6 @@ export async function initializeRedis(): Promise<void> {
     logger.info('🗄️  Connecting to Redis...');
     
     redis = new Redis(config.redis.url, {
-      retryDelayOnFailover: 100,
       maxRetriesPerRequest: 3,
       lazyConnect: true,
       keepAlive: 30000,
