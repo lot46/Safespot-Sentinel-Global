@@ -158,6 +158,9 @@
       - working: true
         agent: "testing"
         comment: "PASSED: All 3 unit tests successful. Tests cover appropriate content (flagged=false), inappropriate content (flagged=true), and fallback behavior on API errors. Service handles EMERGENT_LLM_KEY properly with retry logic and graceful degradation."
+      - working: true
+        agent: "testing"
+        comment: "RE-TESTED: All 3 moderation service unit tests still PASSING after TypeScript fixes. Tests run successfully in 12-13 seconds with proper mocking and error handling."
 
 ## frontend:
   - task: "Consume CSRF token endpoint /api/auth/csrf"
