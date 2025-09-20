@@ -12,7 +12,7 @@ let redis: Redis;
 const memoryStore = new Map<string, { value: string; expireAt?: number }>();
 function memSet(key: string, value: string, ttlSeconds?: number) {
   const expireAt = ttlSeconds && ttlSeconds > 0 ? Date.now() + ttlSeconds * 1000 : undefined;
-  memoryStore.set(key, { value, expireAt });
+  memoryStore.set(key, { value, ...(expireAt !== undefined && { expireAt }) });
 }
 function memGet(key: string): string | null {
   const item = memoryStore.get(key);
