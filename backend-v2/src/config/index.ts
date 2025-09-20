@@ -67,7 +67,7 @@ const envSchema = z.object({
 
   // Email & SMS
   SMTP_HOST: z.string().optional(),
-  SMTP_PORT: z.string().transform(Number).default('587'),
+  SMTP_PORT: z.string().transform(Number).default(587),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().optional(),
