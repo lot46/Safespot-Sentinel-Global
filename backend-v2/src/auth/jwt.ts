@@ -154,7 +154,7 @@ export async function verifyAccessToken(token: string): Promise<AppJWTPayload> {
     return jwtPayload;
     
   } catch (error) {
-    logger.warn('Access token verification failed:', { error: error instanceof Error ? error.message : String(error) });
+    logger.warn(`Access token verification failed: ${error instanceof Error ? error.message : String(error)}`);
     throw new Error('Invalid or expired access token');
   }
 }
