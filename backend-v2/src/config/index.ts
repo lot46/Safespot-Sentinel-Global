@@ -47,7 +47,7 @@ const envSchema = z.object({
   S3_BUCKET: z.string().optional(),
   S3_ACCESS_KEY: z.string().optional(),
   S3_SECRET_KEY: z.string().optional(),
-  MEDIA_MAX_SIZE: z.string().transform(Number).default('10485760'), // 10MB
+  MEDIA_MAX_SIZE: z.string().transform(Number).default(10485760), // 10MB
   MEDIA_ALLOWED_TYPES: z.string().default('image/jpeg,image/png,image/webp,video/mp4'),
 
   // Stripe
