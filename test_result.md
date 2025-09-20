@@ -180,14 +180,19 @@
 
 ## test_plan:
   current_focus:
-    - "Run Prisma migrate + generate, seed dev DB"
-    - "Auth route smoke tests (register/login/refresh/logout)"
-    - "2FA setup/verify flows"
-    - "RBAC: protect admin endpoints"
+    - "Fix TypeScript compilation errors in backend-v2"
+    - "Resolve JWTPayload import conflicts in jwt.ts"
+    - "Fix duplicate function definitions in redis.ts"
+    - "Test auth flows after compilation fixes"
+    - "Test 2FA setup/verify flows"
+    - "Test RBAC admin endpoint protection"
+    - "Test CSRF double-submit cookie behavior"
+    - "Test SOS authenticated flows"
   stuck_tasks:
-    - "None"
+    - "Phase 3 Security & Auth implementation"
+    - "CSRF cookie + refresh cookie"
   test_all: false
-  test_priority: "high_first"
+  test_priority: "stuck_first"
 
 ## agent_communication:
   - agent: "main"
