@@ -88,7 +88,7 @@ export async function authMiddleware(
       id: user.id,
       email: user.email,
       role: user.role,
-      sessionId: payload.sessionId,
+      sessionId: String(payload.sessionId || '') as string,
       isPremium,
     };
 
