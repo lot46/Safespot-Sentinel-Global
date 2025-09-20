@@ -70,7 +70,7 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
     timeWindow: config.security.rateLimit.window,
     skipSuccessfulRequests: true,
     skipOnError: true,
-    keyGenerator: (request) =&gt; {
+    keyGenerator: (request) => {
       return (request.headers['x-forwarded-for'] as string) || request.ip;
     },
     errorResponseBuilder: (request, context) =&gt; {
