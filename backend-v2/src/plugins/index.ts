@@ -128,7 +128,8 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
   });
 
   // WebSocket support
-  await app.register(import('@fastify/websocket'), {
+  const fastifyWebsocket = (await import('@fastify/websocket')).default as any;
+  await app.register(fastifyWebsocket, {
     options: {
       maxPayload: 1024 * 1024, // 1MB max payload
       verifyClient: (info) => {
