@@ -214,7 +214,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<TokenPai
     return newTokenPair;
     
   } catch (error) {
-    logger.warn('Token refresh failed:', error);
+    logger.warn('Token refresh failed:', { error: error instanceof Error ? error.message : String(error) });
     
     // Log security event for failed refresh attempts
     logSecurityEvent({
