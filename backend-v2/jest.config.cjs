@@ -17,11 +17,6 @@ module.exports = {
   setupFiles: ['<rootDir>/__tests__/setupEnv.ts'],
   setupFilesAfterEnv: ['<rootDir>/__tests__/setupPrismaMock.ts'],
   transformIgnorePatterns: [
-    'node_modules/(?!(jose|@fastify|fastify|ioredis)/)'
+    'node_modules/(?!(@fastify|fastify|jose|ioredis)/)'
   ],
-  globals: {
-    'ts-jest': {
-      useESM: true
-    }
-  }
 };
