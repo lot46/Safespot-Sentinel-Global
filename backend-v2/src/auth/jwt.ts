@@ -103,8 +103,8 @@ export async function createRefreshToken(payload: Omit<AppJWTPayload, 'type' | '
   // Store refresh token for rotation and revocation
   await setCache(`refresh:${tokenId}`, { 
     type: 'refresh', 
-    userId: payload.sub, 
-    sessionId: payload.sessionId 
+    userId: String(payload.sub), 
+    sessionId: String(payload.sessionId) 
   }, { 
     ttl: expiresIn,
     prefix: 'auth'
