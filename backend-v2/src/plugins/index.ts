@@ -33,7 +33,8 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
   });
 
   // Cookie support (for CSRF double-submit and refresh token cookie)
-  await app.register(import('@fastify/cookie'), {
+  const cookie = (await import('@fastify/cookie')).default;
+  await app.register(cookie, {
     hook: 'onRequest',
     secret: config.security.encryption.key,
     parseOptions: {
