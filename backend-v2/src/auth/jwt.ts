@@ -162,7 +162,7 @@ export async function verifyAccessToken(token: string): Promise<AppJWTPayload> {
 /**
  * Verify JWT refresh token
  */
-export async function verifyRefreshToken(token: string): Promise<JWTPayload> {
+export async function verifyRefreshToken(token: string): Promise<AppJWTPayload> {
   try {
     const { payload } = await jwtVerify(token, refreshSecret);
     
