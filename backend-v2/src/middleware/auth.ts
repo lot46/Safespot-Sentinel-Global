@@ -241,24 +241,18 @@ export async function ipRateLimitMiddleware(
   maxRequests: number = 100,
   windowMs: number = 900000 // 15 minutes
 ): Promise<void> {
-  const redis = request.server.redis;
+  const { checkRateLimit } = await import('../cache/redis.js');
   const ip = request.ip;
-  const key = `ip_rate_limit:${ip}`;
-  
+
   try {
-    const current = await redis.incr(key);
-    
-    if (current === 1) {
-      await redis.expire(key, Math.ceil(windowMs / 1000));
-    }
-    
-    if (current > maxRequests) {
+    const { allowed, remaining, resetTime } = await checkRateLimit(ip, maxRequests, windowMs, 'ip_rate_limit');
+
+    if (!allowed) {
       logSecurityEvent({
         type: 'rate_limit_exceeded',
         severity: 'medium',
         source: ip,
         metadata: {
-          requests: current,
           limit: maxRequests,
           window: windowMs,
         },
@@ -268,7 +262,7 @@ export async function ipRateLimitMiddleware(
         error: {
           code: 'RATE_LIMIT_EXCEEDED',
           message: 'Too many requests from this IP',
-          retryAfter: Math.ceil(windowMs / 1000),
+          retryAfter: Math.ceil((resetTime - Date.now()) / 1000),
         },
       });
       return;
@@ -276,8 +270,8 @@ export async function ipRateLimitMiddleware(
 
     // Add rate limit headers
     reply.header('X-RateLimit-Limit', maxRequests);
-    reply.header('X-RateLimit-Remaining', Math.max(0, maxRequests - current));
-    reply.header('X-RateLimit-Reset', new Date(Date.now() + windowMs).toISOString());
+    reply.header('X-RateLimit-Remaining', Math.max(0, remaining));
+    reply.header('X-RateLimit-Reset', new Date(resetTime).toISOString());
 
   } catch (error) {
     logger.error('Rate limiting error:', error);
