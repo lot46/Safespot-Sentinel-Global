@@ -75,7 +75,7 @@ export async function authMiddleware(
         source: request.ip,
         userId: user.id,
         metadata: { reason: user.isBanned ? 'banned' : 'inactive' },
-      });
+      } as any);
       throw new Error('Account is inactive or banned');
     }
 
