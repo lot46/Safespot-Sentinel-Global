@@ -115,7 +115,8 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
   });
 
   // Multipart support for file uploads
-  await app.register(import('@fastify/multipart'), {
+  const fastifyMultipart = (await import('@fastify/multipart')).default as any;
+  await app.register(fastifyMultipart, {
     limits: {
       fieldNameSize: 100,
       fieldSize: 100,
