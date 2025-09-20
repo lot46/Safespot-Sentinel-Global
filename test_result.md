@@ -172,3 +172,8 @@
 ## agent_communication:
   - agent: "main"
     message: "Phase 3 auth/security implemented at code level. Next, I will run Prisma migrations and then request deep backend tests for auth flows, RBAC, and SOS endpoints."
+
+  - agent: "user"
+    message: "User confirmed DB migrate/seed done and moderation choices (FLAGGED on inappropriate, persist aiModeration, threshold 80)."
+  - agent: "main"
+    message: "DB is not reachable from this environment; will run moderation unit tests locally and mark DB-dependent tests to run in user's CI environment using yarn test."
