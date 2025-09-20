@@ -193,7 +193,8 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
   }
 
   // Sensible defaults (better error handling)
-  await app.register(import('@fastify/sensible'), {
+  const fastifySensible = (await import('@fastify/sensible')).default as any;
+  await app.register(fastifySensible, {
     errorHandler: true,
   });
 
