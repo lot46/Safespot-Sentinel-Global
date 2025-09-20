@@ -213,3 +213,5 @@
     message: "DB is not reachable from this environment; will run moderation unit tests locally and mark DB-dependent tests to run in user's CI environment using yarn test."
   - agent: "testing"
     message: "CRITICAL: Backend-v2 has TypeScript compilation errors preventing test execution. Moderation service unit tests PASSED (3/3). Current Python backend working perfectly (14/14 tests passed) but not the requested backend-v2. Compilation issues in jwt.ts (JWTPayload conflicts) and redis.ts (duplicate functions) must be fixed before testing auth flows, RBAC, CSRF, and SOS endpoints."
+  - agent: "testing"
+    message: "PROGRESS UPDATE: Fixed TypeScript compilation errors (JWTPayload->AppJWTPayload, type safety fixes in jwt.ts and redis.ts). Moderation service unit tests STILL PASSING (3/3). However, auth/RBAC/CSRF/SOS tests blocked by Fastify plugin version incompatibility: @fastify/cookie expects Fastify 5.x but project uses 4.29.1. Database connectivity confirmed unavailable (DATABASE_URL missing). Need dependency version alignment to proceed with full test suite."
