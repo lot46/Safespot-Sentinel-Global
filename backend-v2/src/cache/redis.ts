@@ -186,8 +186,12 @@ export async function hasCache(
   const fullKey = `${prefix}:${key}`;
   
   try {
-    const exists = await redis.exists(fullKey);
-    return exists === 1;
+    if (redis) {
+      const exists = await redis.exists(fullKey);
+      return exists === 1;
+    } else {
+      return memExists(fullKey);
+    }
   } catch (error) {
     logger.error('Cache exists error:', error);
     return false;
