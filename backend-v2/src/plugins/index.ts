@@ -141,7 +141,8 @@ export async function registerPlugins(app: FastifyInstance): Promise<void> {
 
   // Swagger documentation
   if (config.app.isDevelopment) {
-    await app.register(import('@fastify/swagger'), {
+    const fastifySwagger = (await import('@fastify/swagger')).default as any;
+    await app.register(fastifySwagger, {
       openapi: {
         openapi: '3.0.0',
         info: {
