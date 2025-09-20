@@ -108,11 +108,15 @@ export async function setCache<T>(
   
   try {
     const serialized = JSON.stringify(value);
-    
-    if (ttl > 0) {
-      await redis.setex(fullKey, ttl, serialized);
+
+    if (redis) {
+      if (ttl > 0) {
+        await redis.setex(fullKey, ttl, serialized);
+      } else {
+        await redis.set(fullKey, serialized);
+      }
     } else {
-      await redis.set(fullKey, serialized);
+      memSet(fullKey, serialized, ttl);
     }
     
     logger.debug(`Cache set: ${fullKey} (TTL: ${ttl}s)`);
