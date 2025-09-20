@@ -86,7 +86,7 @@ export async function moderateContent(
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         }
-        const data = await res.json();
+        const data = await res.json() as any;
 
         // Map generic response to our schema
         const flagged = Boolean(data.flagged);
