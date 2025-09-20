@@ -369,7 +369,9 @@ export async function getRedisStats(): Promise<{
     
     for (const line of keyspaceLines) {
       const [db, stats] = line.split(':');
-      keyspace[db] = stats;
+      if (db) {
+        keyspace[db] = stats;
+      }
     }
     
     return {
