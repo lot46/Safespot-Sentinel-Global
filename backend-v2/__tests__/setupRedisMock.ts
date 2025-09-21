@@ -1,4 +1,4 @@
-// Mock Redis for testing
+// Mock Redis and plugin
 const mockRedis = {
   ping: jest.fn().mockResolvedValue('PONG'),
   get: jest.fn().mockResolvedValue(null),
@@ -9,12 +9,7 @@ const mockRedis = {
   incr: jest.fn().mockResolvedValue(1),
   incrby: jest.fn().mockResolvedValue(1),
   expire: jest.fn().mockResolvedValue(1),
-  pipeline: jest.fn().mockReturnValue({
-    incr: jest.fn().mockReturnThis(),
-    incrby: jest.fn().mockReturnThis(),
-    expire: jest.fn().mockReturnThis(),
-    exec: jest.fn().mockResolvedValue([[null, 1], [null, 1]]),
-  }),
+  pipeline: jest.fn().mockReturnValue({ incr: jest.fn().mockReturnThis(), incrby: jest.fn().mockReturnThis(), expire: jest.fn().mockReturnThis(), exec: jest.fn().mockResolvedValue([[null, 1], [null, 1]]) }),
   info: jest.fn().mockResolvedValue('used_memory_human:1M\r\nconnected_clients:1\r\n'),
   quit: jest.fn().mockResolvedValue('OK'),
   connect: jest.fn().mockResolvedValue(undefined),
@@ -22,20 +17,12 @@ const mockRedis = {
   off: jest.fn(),
 };
 
-// Mock @fastify/redis plugin
-jest.mock('@fastify/redis', () => {
-  return {
-    default: async function(fastify: any, options: any) {
-      fastify.decorate('redis', mockRedis);
-    }
-  };
-});
+jest.mock('@fastify/redis', () => ({
+  default: async function (fastify: any, _options: any) {
+    fastify.decorate('redis', mockRedis);
+  }
+}));
 
-// Mock ioredis
-jest.mock('ioredis', () => {
-  return {
-    default: jest.fn().mockImplementation(() => mockRedis)
-  };
-});
+jest.mock('ioredis', () => ({ default: jest.fn().mockImplementation(() => mockRedis) }));
 
 export { mockRedis };
