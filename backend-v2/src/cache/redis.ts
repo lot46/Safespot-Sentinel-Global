@@ -267,7 +267,7 @@ export async function checkRateLimit(
     return { allowed, remaining, resetTime };
     
   } catch (error) {
-    logger.error('Rate limit check error:', error);
+    logger.error({ error }, 'Rate limit check error');
     // Fail open for availability
     return { allowed: true, remaining: maxRequests, resetTime: now + windowMs };
   }
