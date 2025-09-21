@@ -173,6 +173,9 @@
       - working: true
         agent: "testing"
         comment: "RE-TESTED: All 3 moderation service unit tests still PASSING after TypeScript fixes. Tests run successfully in 12-13 seconds with proper mocking and error handling."
+      - working: true
+        agent: "testing"
+        comment: "CONFIRMED PASSING: All 3 moderation service unit tests continue to PASS (8 seconds runtime). Tests validate: 1) appropriate content (flagged=false, trustScore=90), 2) inappropriate content (flagged=true, trustScore=10), 3) fallback on API errors. Service properly handles EMERGENT_LLM_KEY and graceful degradation."
 
 ## frontend:
   - task: "Consume CSRF token endpoint /api/auth/csrf"
