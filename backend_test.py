@@ -32,9 +32,9 @@ class Phase3SecurityTester:
         
         # Test data
         self.test_user = {
-            "email": "security.test@safespotglobal.com",
-            "password": "SecurePhase3Pass123!",
-            "full_name": "Security Tester",
+            "email": "test@safespotglobal.com",
+            "password": "SecurePass123!",
+            "full_name": "Jean Dupont",
             "phone": "+33123456789"
         }
         
