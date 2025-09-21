@@ -233,7 +233,7 @@ export async function incrementCounter(
     return results?.[0]?.[1] as number || 0;
     
   } catch (error) {
-    logger.error('Counter increment error:', error);
+    logger.error({ error }, 'Counter increment error');
     throw error;
   }
 }
