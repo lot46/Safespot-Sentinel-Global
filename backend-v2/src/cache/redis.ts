@@ -192,7 +192,7 @@ export async function hasCache(
       return memExists(fullKey);
     }
   } catch (error) {
-    logger.error('Cache exists error:', error);
+    logger.error({ error }, 'Cache exists error');
     return false;
   }
 }
