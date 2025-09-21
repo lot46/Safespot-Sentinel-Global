@@ -170,7 +170,7 @@ export async function deleteCache(
     }
     logger.debug(`Cache deleted: ${fullKey}`);
   } catch (error) {
-    logger.error('Cache delete error:', error);
+    logger.error({ error }, 'Cache delete error');
   }
 }
 
