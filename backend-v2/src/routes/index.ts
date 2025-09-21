@@ -58,8 +58,11 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       },
     };
 
-    const statusCode = dbHealth && redisHealth ? 200 : 503;
-    reply.code(statusCode as 200 | 503).send(health);
+    if (dbHealth && redisHealth) {
+      reply.code(200).send(health);
+    } else {
+      reply.code(503).send(health);
+    }
   });
 
   // Metrics endpoint for Prometheus
