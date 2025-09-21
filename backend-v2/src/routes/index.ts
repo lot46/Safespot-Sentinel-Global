@@ -59,9 +59,9 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
     };
 
     if (dbHealth && redisHealth) {
-      reply.code(200).send(health);
+      reply.status(200).send(health);
     } else {
-      reply.code(503).send(health);
+      reply.status(503).send(health);
     }
   });
 
