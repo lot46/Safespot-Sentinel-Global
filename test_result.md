@@ -109,7 +109,7 @@
     implemented: true
     working: false
     file: "backend-v2/src/routes/auth.ts"
-    stuck_count: 1
+    stuck_count: 2
     priority: "high"
     needs_retesting: false
     status_history:
@@ -122,6 +122,9 @@
       - working: false
         agent: "testing"
         comment: "PARTIAL PROGRESS: Fixed TypeScript compilation errors (JWTPayload->AppJWTPayload, parseInt type safety, error handling, Redis config). However, auth tests still fail due to Fastify plugin version incompatibility: @fastify/cookie expects Fastify 5.x but 4.29.1 is installed. Cannot test auth flows without resolving dependency versions."
+      - working: false
+        agent: "testing"
+        comment: "CRITICAL BLOCKING ISSUES: Fixed Redis mocking and plugin versions (@fastify/multipart ^9, @fastify/websocket ^11), but TypeScript compilation errors persist in auth.ts: app.config property missing, app.authenticate decorator missing, Prisma schema mismatches (marketingConsent field). Cannot test Phase 3 auth flows (register/login/refresh/logout, 2FA, JWT rotation, RBAC, CSRF) until these compilation issues are resolved."
   - task: "Prisma schema for encrypted fields & PostGIS"
     implemented: true
     working: "NA"
