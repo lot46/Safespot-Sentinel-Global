@@ -296,6 +296,13 @@ export async function csrfMiddleware(
     return;
   }
 
+  // Exempt specific auth endpoints that use HttpOnly refresh cookie
+  const path = request.url || '';
+  const exempt = ['/api/auth/refresh', '/api/auth/logout', '/api/auth/rotate'];
+  if (exempt.includes(path)) {
+    return;
+  }
+
   // Double-submit cookie: token must match header and cookie
   const csrfToken = request.headers['x-csrf-token'] as string;
   const csrfCookie = (request.cookies && (request.cookies['ssg_csrf'] as string)) || '';
