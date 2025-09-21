@@ -211,6 +211,9 @@
     message: "User confirmed DB migrate/seed done and moderation choices (FLAGGED on inappropriate, persist aiModeration, threshold 80)."
   - agent: "main"
     message: "DB is not reachable from this environment; will run moderation unit tests locally and mark DB-dependent tests to run in user's CI environment using yarn test."
+  - agent: "main"
+    message: "Upgraded to Fastify v5 with aligned plugins; added Prisma mock adapter and Jose mock for tests; fixed TS logger typings and reply.status types; added auth and RBAC/CSRF/SOS tests using mocked Prisma. Requesting deep test run for Phase 3 suites with mocked DB."
+
   - agent: "testing"
     message: "CRITICAL: Backend-v2 has TypeScript compilation errors preventing test execution. Moderation service unit tests PASSED (3/3). Current Python backend working perfectly (14/14 tests passed) but not the requested backend-v2. Compilation issues in jwt.ts (JWTPayload conflicts) and redis.ts (duplicate functions) must be fixed before testing auth flows, RBAC, CSRF, and SOS endpoints."
   - agent: "testing"
