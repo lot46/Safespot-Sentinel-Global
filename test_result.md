@@ -143,7 +143,7 @@
     implemented: true
     working: false
     file: "backend-v2/src/middleware/auth.ts"
-    stuck_count: 1
+    stuck_count: 2
     priority: "medium"
     needs_retesting: false
     status_history:
@@ -156,6 +156,9 @@
       - working: false
         agent: "testing"
         comment: "BLOCKED: TypeScript compilation errors fixed, but CSRF tests fail due to Fastify plugin version incompatibility. @fastify/cookie plugin expects Fastify 5.x but project uses 4.29.1. Cannot test CSRF double-submit cookie functionality without compatible versions."
+      - working: false
+        agent: "testing"
+        comment: "STILL BLOCKED: Fixed plugin versions but TypeScript compilation errors in auth.ts prevent CSRF testing. Cannot test double-submit cookie validation until app.config and app.authenticate issues are resolved."
   - task: "Moderation service unit tests"
     implemented: true
     working: true
