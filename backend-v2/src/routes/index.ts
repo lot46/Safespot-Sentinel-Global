@@ -11,10 +11,7 @@ import { authMiddleware, roleMiddleware, premiumMiddleware } from '../middleware
  * Register all API routes
  */
 export async function registerRoutes(app: FastifyInstance): Promise<void> {
-  // Register global middleware
-  app.addHook('preHandler', authMiddleware);
-  app.addHook('preHandler', roleMiddleware);
-  app.addHook('preHandler', premiumMiddleware);
+  // Note: Auth/role/premium are enforced per-route via preHandler decorators to avoid blocking public endpoints
 
   // Health check route (no auth required)
   app.get('/health', {
