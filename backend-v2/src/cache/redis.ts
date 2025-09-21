@@ -147,7 +147,7 @@ export async function getCache<T>(
     return parsed;
     
   } catch (error) {
-    logger.error('Cache get error:', error);
+    logger.error({ error }, 'Cache get error');
     return null;
   }
 }
