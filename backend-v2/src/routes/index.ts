@@ -163,7 +163,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
   // Global error handler
   app.setErrorHandler(async (error, request, reply) => {
     // Log error with context
-    logger.error('Request error:', {
+    logger.error({
       error: error.message,
       stack: error.stack,
       url: request.url,
@@ -171,7 +171,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
       ip: request.ip,
       userAgent: request.headers['user-agent'],
       userId: request.user?.id,
-    });
+    }, 'Request error');
 
     // Don't expose internal errors in production
     const isDevelopment = process.env.NODE_ENV === 'development';
