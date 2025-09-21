@@ -79,7 +79,7 @@ export async function initializeRedis(): Promise<void> {
     logger.info('✅ Redis initialized successfully');
     
   } catch (error) {
-    logger.error('❌ Failed to initialize Redis:', error);
+    logger.error({ error }, '❌ Failed to initialize Redis');
     throw error;
   }
 }
