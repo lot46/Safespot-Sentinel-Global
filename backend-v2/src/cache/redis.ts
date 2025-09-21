@@ -382,7 +382,7 @@ export async function getRedisStats(): Promise<{
     };
     
   } catch (error) {
-    logger.error('Failed to get Redis stats:', error);
+    logger.error({ error }, 'Failed to get Redis stats');
     return {
       connected: false,
       memory: 'unknown',
