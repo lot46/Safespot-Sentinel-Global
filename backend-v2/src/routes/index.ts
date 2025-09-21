@@ -98,7 +98,7 @@ export async function registerRoutes(app: FastifyInstance): Promise<void> {
 
       reply.type('text/plain').send(metrics);
     } catch (error) {
-      logger.error('Metrics generation failed:', error);
+      logger.error({ error }, 'Metrics generation failed');
       reply.code(500).send('Metrics unavailable');
     }
   });
