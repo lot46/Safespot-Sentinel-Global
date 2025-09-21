@@ -37,7 +37,7 @@ export async function encrypt(plaintext: string): Promise<string> {
     const combined = Buffer.concat([salt, iv, authTag, encrypted]);
     return combined.toString('base64');
   } catch (error) {
-    logger.error('Encryption error:', error);
+    logger.error({ error }, 'Encryption error');
     throw new Error('Encryption failed');
   }
 }
