@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { getPrisma } from '../database/index.js';
 import { logger, logAuditEvent, logSecurityEvent } from '../utils/logger.js';
 import { hashPassword, verifyPassword, encrypt, decrypt, normalizePhone, hashForSearch, generateSecureToken } from '../security/encryption.js';
-import { createTokenPair, refreshAccessToken, revokeUserSession } from '../auth/jwt.js';
+import { createTokenPair, refreshAccessToken, revokeUserSession, verifyAccessToken, revokeToken } from '../auth/jwt.js';
 import { generate2FASetup, verify2FASetup, verify2FA, disable2FA, get2FAStatus, regenerateBackupCodes } from '../auth/2fa.js';
 
 const prisma = getPrisma();
@@ -94,6 +94,16 @@ export default async function authRoutes(app: FastifyInstance) {
     reply.send({ tokens: { ...tokens, refreshToken: undefined } });
   });
 
+  // Rotate (new access from access - revoke old)
+  app.post('/rotate', { preHandler: [app.authenticate], schema: { tags: ['Auth'], summary: 'Rotate access token', security: [{ bearerAuth: [] }] } }, async (request, reply) => {
+    const token = (request.headers.authorization || '').split(' ')[1] || '';
+    const payload = await verifyAccessToken(token);
+    if (payload?.jti) await revokeToken(payload.jti, 'access');
+    const newPair = await createTokenPair({ sub: payload.sub, email: payload.email, role: payload.role, sessionId: payload.sessionId });
+    setRefreshCookie(reply, newPair.refreshToken);
+    reply.send({ tokens: { ...newPair, refreshToken: undefined } });
+  });
+
   // Logout
   app.post('/logout', { preHandler: [app.authenticate], schema: { tags: ['Auth'], summary: 'Logout', security: [{ bearerAuth: [] }] } }, async (request, reply) => {
     const user = request.user!; await revokeUserSession(user.id, user.sessionId); reply.clearCookie('ssg_refresh', { path: '/' }); logAuditEvent({ actorId: user.id, action: 'user_logout', resource: 'user', resourceId: user.id, success: true, ipAddress: request.ip }); reply.send({ message: 'Logged out successfully' });
@@ -114,10 +124,8 @@ export default async function authRoutes(app: FastifyInstance) {
     const user = request.user!; const data = verifySchema.parse(request.body); const verification = await verify2FA(user.id, data.token); if (!verification.isValid) throw app.httpErrors.badRequest('Invalid 2FA token'); const backupCodes = await regenerateBackupCodes(user.id); logAuditEvent({ actorId: user.id, action: '2fa_backup_codes_regenerated', resource: 'user', resourceId: user.id, success: true, ipAddress: request.ip }); reply.send({ backupCodes });
   });
 
-  // Test route for rate limiting (mock-friendly)
-  app.get('/ratelimit/test', { schema: { tags: ['Auth'], summary: 'Rate limit test' }, preHandler: async (req, reply) => { const { ipRateLimitMiddleware } = await import('../middleware/auth.js'); await ipRateLimitMiddleware(req, reply, 1, 2000); } }, async (_request, reply) => {
-    reply.send({ ok: true });
-  });
+  // Rate limit test endpoint
+  app.get('/ratelimit/test', { schema: { tags: ['Auth'], summary: 'Rate limit test' }, preHandler: async (req, reply) => { const { ipRateLimitMiddleware } = await import('../middleware/auth.js'); await ipRateLimitMiddleware(req, reply, 1, 2000); } }, async (_request, reply) => { reply.send({ ok: true }); });
 
   // OAuth2 providers (scaffold)
   try {
