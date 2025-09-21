@@ -65,7 +65,7 @@ export async function initializeRedis(): Promise<void> {
     });
 
     redis.on('error', (error) => {
-      logger.error('❌ Redis error:', error);
+      logger.error({ error }, '❌ Redis error');
     });
 
     redis.on('reconnecting', () => {
