@@ -209,13 +209,15 @@
 
 ## test_plan:
   current_focus:
-    - "Fix TypeScript compilation errors in backend-v2"
-    - "Resolve JWTPayload import conflicts in jwt.ts"
-    - "Fix duplicate function definitions in redis.ts"
-    - "Test auth flows after compilation fixes"
-    - "Test 2FA setup/verify flows"
-    - "Test RBAC admin endpoint protection"
+    - "Fix TypeScript compilation errors in backend-v2 auth.ts"
+    - "Resolve app.config and app.authenticate decorator issues"
+    - "Fix Prisma schema mismatches (marketingConsent field)"
+    - "Test Phase 3 auth flows after compilation fixes"
+    - "Test 2FA setup/verify/disable + backup codes"
+    - "Test JWT rotation + malformed/expired tokens"
+    - "Test RBAC admin-only endpoint protection"
     - "Test CSRF double-submit cookie behavior"
+    - "Test rate limiting 429 responses"
     - "Test SOS authenticated flows"
   stuck_tasks:
     - "Phase 3 Security & Auth implementation"
