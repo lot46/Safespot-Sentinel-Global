@@ -109,7 +109,7 @@
     implemented: true
     working: false
     file: "backend-v2/src/routes/auth.ts"
-    stuck_count: 2
+    stuck_count: 3
     priority: "high"
     needs_retesting: false
     status_history:
@@ -125,6 +125,9 @@
       - working: false
         agent: "testing"
         comment: "CRITICAL BLOCKING ISSUES: Fixed Redis mocking and plugin versions (@fastify/multipart ^9, @fastify/websocket ^11), but TypeScript compilation errors persist in auth.ts: app.config property missing, app.authenticate decorator missing, Prisma schema mismatches (marketingConsent field). Cannot test Phase 3 auth flows (register/login/refresh/logout, 2FA, JWT rotation, RBAC, CSRF) until these compilation issues are resolved."
+      - working: false
+        agent: "testing"
+        comment: "PHASE 3 MOCKED SUITE TESTED ON CURRENT BACKEND: Backend-v2 remains BLOCKED by compilation errors. Tested current Python backend (server.py) against all Phase 3 requirements. MISSING: JWT refresh/rotation (404), 2FA setup/verify/disable/backup (404), RBAC admin endpoints (404), CSRF token/protection (404), rate limiting (no 429s). WORKING: Basic auth register/login, JWT structure validation, malformed/expired token rejection, SOS authenticated flows, moderation service. Current backend needs Phase 3 security features implementation."
   - task: "Prisma schema for encrypted fields & PostGIS"
     implemented: true
     working: "NA"
