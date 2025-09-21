@@ -66,7 +66,7 @@ export async function decrypt(encryptedData: string): Promise<string> {
     const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
     return decrypted.toString('utf8');
   } catch (error) {
-    logger.error('Decryption error:', error);
+    logger.error({ error }, 'Decryption error');
     throw new Error('Decryption failed');
   }
 }
