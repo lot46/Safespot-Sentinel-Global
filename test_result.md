@@ -220,6 +220,7 @@
   stuck_tasks:
     - "Phase 3 Security & Auth implementation"
     - "CSRF cookie + refresh cookie"
+    - "Prisma schema for encrypted fields & PostGIS"
   test_all: false
   test_priority: "stuck_first"
 
