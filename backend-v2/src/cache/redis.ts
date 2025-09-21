@@ -120,7 +120,7 @@ export async function setCache<T>(
     
     logger.debug(`Cache set: ${fullKey} (TTL: ${ttl}s)`);
   } catch (error) {
-    logger.error('Cache set error:', error);
+    logger.error({ error }, 'Cache set error');
     throw error;
   }
 }
