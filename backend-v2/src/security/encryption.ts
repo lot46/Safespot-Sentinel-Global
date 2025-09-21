@@ -112,7 +112,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
     const bcrypt = await import('bcrypt');
     return bcrypt.compare(password, hash);
   } catch (error) {
-    logger.error('Password verification error:', error);
+    logger.error({ error }, 'Password verification error');
     return false;
   }
 }
