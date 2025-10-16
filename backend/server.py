@@ -527,8 +527,12 @@ async def shutdown_db_client():
 from datetime import datetime, timezone
 
 @app.get("/api/health")
+from datetime import datetime, timezone
+
+@app.get("/api/health")
 def health():
     return {"status": "ok", "ts": datetime.now(timezone.utc).isoformat()}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
