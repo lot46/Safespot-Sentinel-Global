@@ -527,7 +527,7 @@ async def shutdown_db_client():
 from datetime import datetime, timezone
 
 @app.get("/api/health")
-from datetime import datetime, timezone
+
 
 @app.get("/api/health")
 def health():
