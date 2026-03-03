@@ -526,9 +526,6 @@ async def shutdown_db_client():
     client.close()
 
 
-
-
-
 @app.get("/api/health")
 def health():
     return {"status": "ok", "ts": datetime.now(timezone.utc).isoformat()}
